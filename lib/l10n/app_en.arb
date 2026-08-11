@@ -6,6 +6,56 @@
   },
   "homeTagline": "Capture and work on GTT-Redmine issues in the field.",
   "@homeTagline": {
-    "description": "Short tagline on the placeholder home screen."
+    "description": "Short tagline on the connect screen."
+  },
+  "connectInstanceUrlLabel": "Instance URL",
+  "connectApiKeyLabel": "API key",
+  "connectFieldRequired": "Required",
+  "connectButton": "Connect",
+  "connectFailed": "Could not connect: {message}",
+  "@connectFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "issuesTitle": "Issues",
+  "issuesListTab": "List",
+  "issuesMapTab": "Map",
+  "issuesRefreshTooltip": "Refresh",
+  "disconnectTooltip": "Disconnect",
+  "issuesEmpty": "No issues are visible on this instance.",
+  "issuesLoadFailed": "Could not load issues: {message}",
+  "@issuesLoadFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "retryButton": "Retry",
+  "issuesUnplaced": "Unplaced",
+  "issuesDueDate": "Due {date}",
+  "@issuesDueDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "issueProjectLabel": "Project",
+  "issueAssigneeLabel": "Assignee",
+  "issueDueDateLabel": "Due date",
+  "issueAllowedStatusChanges": "Allowed status changes",
+  "issueAttachmentsHeading": "Attachments",
+  "issueHistoryHeading": "History",
+  "issueJournalChanges": "{count, plural, =1{1 field changed} other{{count} fields changed}}",
+  "@issueJournalChanges": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
