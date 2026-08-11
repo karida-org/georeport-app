@@ -1,0 +1,68 @@
+/// The lean issue shape used in bundle feature properties and unplaced lists.
+///
+/// Every key is present in the payload, with explicit nulls for unset values.
+/// Note the contract quirk: `status_id` and `tracker_id` are ids, while
+/// priority, assignee, category, and version arrive as display names.
+class IssueSummary {
+  const IssueSummary({
+    required this.id,
+    required this.projectId,
+    required this.subject,
+    required this.statusId,
+    required this.trackerId,
+    required this.doneRatio,
+    required this.lockVersion,
+    required this.editable,
+    this.priority,
+    this.assignedTo,
+    this.category,
+    this.fixedVersion,
+    this.startDate,
+    this.dueDate,
+    this.estimatedHours,
+    this.createdOn,
+    this.updatedOn,
+  });
+
+  factory IssueSummary.fromJson(Map<String, dynamic> json) {
+    return IssueSummary(
+      id: (json['id'] as num).toInt(),
+      projectId: (json['project_id'] as num).toInt(),
+      subject: json['subject'] as String? ?? '',
+      statusId: (json['status_id'] as num).toInt(),
+      trackerId: (json['tracker_id'] as num).toInt(),
+      doneRatio: (json['done_ratio'] as num?)?.toInt() ?? 0,
+      lockVersion: (json['lock_version'] as num?)?.toInt() ?? 0,
+      editable: json['editable'] == true,
+      priority: json['priority'] as String?,
+      assignedTo: json['assigned_to'] as String?,
+      category: json['category'] as String?,
+      fixedVersion: json['fixed_version'] as String?,
+      startDate: _date(json['start_date']),
+      dueDate: _date(json['due_date']),
+      estimatedHours: (json['estimated_hours'] as num?)?.toDouble(),
+      createdOn: _date(json['created_on']),
+      updatedOn: _date(json['updated_on']),
+    );
+  }
+
+  final int id;
+  final int projectId;
+  final String subject;
+  final int statusId;
+  final int trackerId;
+  final int doneRatio;
+  final int lockVersion;
+  final bool editable;
+  final String? priority;
+  final String? assignedTo;
+  final String? category;
+  final String? fixedVersion;
+  final DateTime? startDate;
+  final DateTime? dueDate;
+  final double? estimatedHours;
+  final DateTime? createdOn;
+  final DateTime? updatedOn;
+}
+
+DateTime? _date(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;

@@ -1,5 +1,27 @@
 {
   "@@locale": "ja",
   "appTitle": "Georeport",
-  "homeTagline": "GTT-Redmine のチケットを現場から登録・処理できるアプリです。"
+  "homeTagline": "GTT-Redmine のチケットを現場から登録・処理できるアプリです。",
+  "connectInstanceUrlLabel": "インスタンス URL",
+  "connectApiKeyLabel": "API キー",
+  "connectFieldRequired": "必須です",
+  "connectButton": "接続",
+  "connectFailed": "接続できませんでした: {message}",
+  "issuesTitle": "チケット",
+  "issuesListTab": "一覧",
+  "issuesMapTab": "地図",
+  "issuesRefreshTooltip": "更新",
+  "disconnectTooltip": "切断",
+  "issuesEmpty": "このインスタンスに表示できるチケットはありません。",
+  "issuesLoadFailed": "チケットを読み込めませんでした: {message}",
+  "retryButton": "再試行",
+  "issuesUnplaced": "位置未設定",
+  "issuesDueDate": "期日 {date}",
+  "issueProjectLabel": "プロジェクト",
+  "issueAssigneeLabel": "担当者",
+  "issueDueDateLabel": "期日",
+  "issueAllowedStatusChanges": "変更可能なステータス",
+  "issueAttachmentsHeading": "添付ファイル",
+  "issueHistoryHeading": "履歴",
+  "issueJournalChanges": "{count, plural, other{{count} 件のフィールドが変更されました}}"
 }

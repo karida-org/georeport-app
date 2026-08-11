@@ -1,0 +1,214 @@
+{
+  "@id": "https://localhost:3000/issues/36",
+  "@type": "gtt:Issue",
+  "identifier": 36,
+  "subject": "Survey marker verification (internal)",
+  "description": "## Summary\r\n\r\nInternal check of the benchmark marker; not for public view.",
+  "status": {
+    "@id": "https://localhost:3000/issue_statuses/1",
+    "id": 1,
+    "name": "New"
+  },
+  "tracker": {
+    "@id": "https://localhost:3000/trackers/1",
+    "id": 1,
+    "name": "Task"
+  },
+  "project": {
+    "@id": "https://localhost:3000/projects/field-survey",
+    "id": 5,
+    "identifier": "field-survey",
+    "name": "Field Survey"
+  },
+  "priority": {
+    "@id": "https://localhost:3000/enumerations/2",
+    "id": 2,
+    "name": "Normal"
+  },
+  "author": {
+    "@id": "https://localhost:3000/users/1",
+    "id": 1,
+    "name": "Site Administrator"
+  },
+  "assigned_to": {
+    "@id": "https://localhost:3000/users/5",
+    "id": 5,
+    "name": "Sora Field"
+  },
+  "done_ratio": 0,
+  "is_private": true,
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      135.357,
+      34.748,
+      0.0
+    ]
+  },
+  "asWKT": "SRID=4326;Point (135.357 34.748 0.0)",
+  "lock_version": 2,
+  "created_on": "2026-07-12T03:44:23Z",
+  "updated_on": "2026-07-14T03:57:57Z",
+  "journals": [
+    {
+      "id": 63,
+      "user": {
+        "@id": "https://localhost:3000/users/1",
+        "id": 1,
+        "name": "Site Administrator"
+      },
+      "created_on": "2026-07-14T03:57:57Z",
+      "private_notes": false,
+      "details": [
+        {
+          "property": "attr",
+          "name": "description",
+          "diff_url": "https://localhost:3000/journals/63/diff?detail_id=68"
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "type": "blocks",
+      "issue": {
+        "@id": "https://localhost:3000/issues/43",
+        "id": 43,
+        "subject": "GNSS receiver drift check at point B"
+      }
+    }
+  ],
+  "changesets": [],
+  "attachments": [],
+  "custom_fields": [
+    {
+      "id": 2,
+      "name": "Reported via",
+      "field_format": "list",
+      "multiple": false,
+      "value": null,
+      "possible_values": [
+        "Phone",
+        "Web app",
+        "Field visit",
+        "Email"
+      ],
+      "value_options": [],
+      "writable": true
+    },
+    {
+      "id": 3,
+      "name": "On-site verified",
+      "field_format": "bool",
+      "multiple": false,
+      "value": null,
+      "possible_values": [],
+      "value_options": [],
+      "writable": true
+    },
+    {
+      "id": 4,
+      "name": "Inspection date",
+      "field_format": "date",
+      "multiple": false,
+      "value": "2026-07-08",
+      "possible_values": [],
+      "value_options": [],
+      "writable": true
+    }
+  ],
+  "editable": {
+    "fields": [
+      "project_id",
+      "tracker_id",
+      "status_id",
+      "category_id",
+      "assigned_to_id",
+      "priority_id",
+      "fixed_version_id",
+      "subject",
+      "description",
+      "start_date",
+      "due_date",
+      "done_ratio",
+      "estimated_hours",
+      "custom_field_values",
+      "custom_fields",
+      "lock_version",
+      "notes",
+      "private_notes",
+      "is_private",
+      "parent_issue_id",
+      "deleted_attachment_ids",
+      "geojson",
+      "start_time",
+      "due_time",
+      "all_day"
+    ],
+    "can_delete": true,
+    "can_add_notes": true,
+    "can_add_attachments": true,
+    "status_transitions": [
+      {
+        "id": 1,
+        "name": "New"
+      },
+      {
+        "id": 2,
+        "name": "In Progress"
+      },
+      {
+        "id": 3,
+        "name": "Resolved"
+      },
+      {
+        "id": 4,
+        "name": "Feedback"
+      },
+      {
+        "id": 5,
+        "name": "Closed"
+      },
+      {
+        "id": 6,
+        "name": "Rejected"
+      }
+    ],
+    "references": {
+      "assigned_to_id": [
+        {
+          "id": 1,
+          "name": "Site Administrator"
+        },
+        {
+          "id": 5,
+          "name": "Sora Field"
+        }
+      ],
+      "priority_id": [
+        {
+          "id": 1,
+          "name": "Low"
+        },
+        {
+          "id": 2,
+          "name": "Normal"
+        },
+        {
+          "id": 3,
+          "name": "High"
+        },
+        {
+          "id": 4,
+          "name": "Urgent"
+        },
+        {
+          "id": 5,
+          "name": "Immediate"
+        }
+      ],
+      "category_id": [],
+      "fixed_version_id": []
+    }
+  }
+}

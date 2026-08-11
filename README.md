@@ -24,6 +24,14 @@ flutter pub get
 flutter run
 ```
 
+Without a phone or simulator, `flutter run -d chrome` works for day-to-day
+development (the web target exists for that purpose; mobile stays the
+product). To try it against a live instance, run
+`dart run tool/live_check.dart <base-url> <api-key>` first to confirm the
+server side, and note that browsers need the Redmine instance to send CORS
+headers, which stock Redmine does not; a phone or simulator has no such
+restriction.
+
 Checks, as run by CI:
 
 ```sh

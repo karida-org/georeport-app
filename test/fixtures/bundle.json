@@ -1,0 +1,423 @@
+{
+  "issues": {
+    "point": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "id": 36,
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              135.357,
+              34.748,
+              0.0
+            ]
+          },
+          "properties": {
+            "id": 36,
+            "project_id": 5,
+            "subject": "Survey marker verification (internal)",
+            "status_id": 1,
+            "tracker_id": 1,
+            "priority": "Normal",
+            "assigned_to": "Sora Field",
+            "category": null,
+            "fixed_version": null,
+            "start_date": null,
+            "due_date": null,
+            "done_ratio": 0,
+            "estimated_hours": null,
+            "created_on": "2026-07-12T03:44:23Z",
+            "updated_on": "2026-07-14T03:57:57Z",
+            "lock_version": 2,
+            "editable": true,
+            "custom_fields": [
+              {
+                "id": 2,
+                "name": "Reported via",
+                "field_format": "list",
+                "multiple": false,
+                "value": null
+              },
+              {
+                "id": 3,
+                "name": "On-site verified",
+                "field_format": "bool",
+                "multiple": false,
+                "value": null
+              },
+              {
+                "id": 4,
+                "name": "Inspection date",
+                "field_format": "date",
+                "multiple": false,
+                "value": "2026-07-08"
+              }
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "id": 32,
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              135.35959,
+              34.74544,
+              0.0
+            ]
+          },
+          "properties": {
+            "id": 32,
+            "project_id": 4,
+            "subject": "Broken streetlight near the station",
+            "status_id": 3,
+            "tracker_id": 2,
+            "priority": "High",
+            "assigned_to": "Site Administrator",
+            "category": null,
+            "fixed_version": null,
+            "start_date": "2026-07-06",
+            "due_date": "2026-07-09",
+            "done_ratio": 100,
+            "estimated_hours": null,
+            "created_on": "2026-07-12T03:44:23Z",
+            "updated_on": "2026-07-15T19:59:28Z",
+            "lock_version": 6,
+            "editable": true,
+            "custom_fields": [
+              {
+                "id": 1,
+                "name": "Severity",
+                "field_format": "list",
+                "multiple": false,
+                "value": "High"
+              },
+              {
+                "id": 2,
+                "name": "Reported via",
+                "field_format": "list",
+                "multiple": false,
+                "value": "Phone"
+              },
+              {
+                "id": 3,
+                "name": "On-site verified",
+                "field_format": "bool",
+                "multiple": false,
+                "value": "1"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "line": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "id": 39,
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                135.353,
+                34.749,
+                0.0
+              ],
+              [
+                135.3545,
+                34.7495,
+                0.0
+              ],
+              [
+                135.3555,
+                34.7498,
+                0.0
+              ]
+            ]
+          },
+          "properties": {
+            "id": 39,
+            "project_id": 6,
+            "subject": "Guardrail damage along the curve",
+            "status_id": 3,
+            "tracker_id": 1,
+            "priority": "Normal",
+            "assigned_to": "Sora Field",
+            "category": null,
+            "fixed_version": null,
+            "start_date": "2026-07-03",
+            "due_date": "2026-07-19",
+            "done_ratio": 100,
+            "estimated_hours": null,
+            "created_on": "2026-07-12T03:44:23Z",
+            "updated_on": "2026-07-30T02:40:52Z",
+            "lock_version": 5,
+            "editable": true,
+            "custom_fields": [
+              {
+                "id": 2,
+                "name": "Reported via",
+                "field_format": "list",
+                "multiple": false,
+                "value": null
+              },
+              {
+                "id": 3,
+                "name": "On-site verified",
+                "field_format": "bool",
+                "multiple": false,
+                "value": null
+              },
+              {
+                "id": 4,
+                "name": "Inspection date",
+                "field_format": "date",
+                "multiple": false,
+                "value": "2026-07-01"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "polygon": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "id": 45,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  135.354,
+                  34.747,
+                  0.0
+                ],
+                [
+                  135.356,
+                  34.747,
+                  0.0
+                ],
+                [
+                  135.356,
+                  34.7482,
+                  0.0
+                ],
+                [
+                  135.354,
+                  34.7482,
+                  0.0
+                ],
+                [
+                  135.354,
+                  34.747,
+                  0.0
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "id": 45,
+            "project_id": 5,
+            "subject": "Waterlogged transect blocking access",
+            "status_id": 2,
+            "tracker_id": 2,
+            "priority": "Urgent",
+            "assigned_to": "Sora Field",
+            "category": null,
+            "fixed_version": null,
+            "start_date": "2026-07-11",
+            "due_date": "2026-07-15",
+            "done_ratio": 40,
+            "estimated_hours": null,
+            "created_on": "2026-07-12T13:38:48Z",
+            "updated_on": "2026-07-12T13:38:48Z",
+            "lock_version": 3,
+            "editable": true,
+            "custom_fields": [
+              {
+                "id": 1,
+                "name": "Severity",
+                "field_format": "list",
+                "multiple": false,
+                "value": "Critical"
+              },
+              {
+                "id": 2,
+                "name": "Reported via",
+                "field_format": "list",
+                "multiple": false,
+                "value": null
+              },
+              {
+                "id": 3,
+                "name": "On-site verified",
+                "field_format": "bool",
+                "multiple": false,
+                "value": "1"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "unplaced": [
+      {
+        "id": 53,
+        "project_id": 5,
+        "subject": "Export survey data to GeoPackage",
+        "status_id": 3,
+        "tracker_id": 3,
+        "priority": "Low",
+        "assigned_to": "Site Administrator",
+        "category": null,
+        "fixed_version": null,
+        "start_date": null,
+        "due_date": null,
+        "done_ratio": 100,
+        "estimated_hours": null,
+        "created_on": "2026-07-12T13:38:48Z",
+        "updated_on": "2026-07-12T13:38:48Z",
+        "lock_version": 1,
+        "editable": true,
+        "custom_fields": [
+          {
+            "id": 2,
+            "name": "Reported via",
+            "field_format": "list",
+            "multiple": false,
+            "value": "Web app"
+          },
+          {
+            "id": 3,
+            "name": "On-site verified",
+            "field_format": "bool",
+            "multiple": false,
+            "value": null
+          },
+          {
+            "id": 4,
+            "name": "Inspection date",
+            "field_format": "date",
+            "multiple": false,
+            "value": null
+          }
+        ]
+      }
+    ]
+  },
+  "project_boundary": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.3515,
+                34.744,
+                0.0
+              ],
+              [
+                135.3625,
+                34.744,
+                0.0
+              ],
+              [
+                135.3625,
+                34.7515,
+                0.0
+              ],
+              [
+                135.3515,
+                34.7515,
+                0.0
+              ],
+              [
+                135.3515,
+                34.744,
+                0.0
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "project_id": 5,
+          "identifier": "field-survey",
+          "name": "Field Survey"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.34985576019338,
+                34.74999830826577,
+                0.0
+              ],
+              [
+                135.34991475455985,
+                34.74278362164546,
+                0.0
+              ],
+              [
+                135.36348195046745,
+                34.742739678957804,
+                0.0
+              ],
+              [
+                135.3635691012361,
+                34.75015381579395,
+                0.0
+              ],
+              [
+                135.34985576019338,
+                34.74999830826577,
+                0.0
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "project_id": 6,
+          "identifier": "road-inspection",
+          "name": "Road Inspection"
+        }
+      }
+    ]
+  },
+  "projects": [
+    {
+      "@id": "https://localhost:3000/projects/field-survey",
+      "id": 5,
+      "identifier": "field-survey",
+      "name": "Field Survey",
+      "has_boundary": true
+    },
+    {
+      "@id": "https://localhost:3000/projects/road-inspection",
+      "id": 6,
+      "identifier": "road-inspection",
+      "name": "Road Inspection",
+      "has_boundary": true
+    },
+    {
+      "@id": "https://localhost:3000/projects/demo",
+      "id": 4,
+      "identifier": "demo",
+      "name": "Demo Reports",
+      "has_boundary": false
+    }
+  ]
+}

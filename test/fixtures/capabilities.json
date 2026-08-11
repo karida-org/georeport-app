@@ -1,0 +1,55 @@
+{
+    "plugin": "redmine_gtt_sync",
+    "version": "0.5.0",
+    "redmine": {
+        "version": "7.0.0.stable",
+        "rails": "8.1.3"
+    },
+    "requires": {
+        "redmine_gtt": true,
+        "redmine_gtt_version": "7.1.0"
+    },
+    "capabilities": {
+        "geojson_read": true,
+        "geojson_write": true,
+        "spatial_filter_bbox": true,
+        "spatial_filter_distance": true,
+        "issue_jsonld": true,
+        "issue_documents_batch": true,
+        "project_bundle": true,
+        "query_bundle": true,
+        "bulk_geometry_write": false,
+        "geometry_only_patch": false,
+        "change_feed": true,
+        "schema_introspection": true,
+        "ogc_api_features": false,
+        "wfs_t": false,
+        "query_scoped_bundle": true
+    },
+    "formatting": {
+        "text_formatting": "common_mark",
+        "markdown": true
+    },
+    "oauth": {
+        "authorize_url": "https://localhost:3000/oauth/authorize",
+        "token_url": "https://localhost:3000/oauth/token",
+        "scopes": [
+            "view_project",
+            "search_project",
+            "edit_project",
+            "view_issues",
+            "add_issues",
+            "edit_issues",
+            "delete_issues",
+            "set_issues_private",
+            "add_issue_notes",
+            "edit_issue_notes",
+            "edit_own_issue_notes",
+            "view_private_notes",
+            "set_notes_private",
+            "view_gtt_settings",
+            "use_gtt_sync"
+        ],
+        "client_id": "45ct-M4qYVK2aTmV4hSus4qx0Yw9JN6HSCPUmtY5RbA"
+    }
+}
