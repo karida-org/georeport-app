@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  "appTitle": "Georeport",
+  "@appTitle": {
+    "description": "The application name, shown in the app bar and task switcher. Not translated."
+  },
+  "homeTagline": "Capture and work on GTT-Redmine issues in the field.",
+  "@homeTagline": {
+    "description": "Short tagline on the placeholder home screen."
+  }
+}
