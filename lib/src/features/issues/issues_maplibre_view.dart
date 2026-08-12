@@ -80,7 +80,10 @@ class _IssuesMapLibreViewState extends State<IssuesMapLibreView> {
   @override
   void didUpdateWidget(IssuesMapLibreView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.issues, widget.issues)) {
+    // The parent rebuilds the filtered list every frame, so identity is not
+    // a change signal; a content signature (id + lock_version + placement)
+    // is, and it is cheap compared to re-encoding the GeoJSON sources.
+    if (_signature(oldWidget.issues) != _signature(widget.issues)) {
       final style = _style;
       if (style != null) {
         updateIssueSources(style, bundleToSources(widget.issues)).catchError(
@@ -88,6 +91,17 @@ class _IssuesMapLibreViewState extends State<IssuesMapLibreView> {
         );
       }
     }
+  }
+
+  static int _signature(List<BundleIssue> issues) {
+    return Object.hashAll([
+      for (final issue in issues)
+        Object.hash(
+          issue.summary.id,
+          issue.summary.lockVersion,
+          issue.isPlaced,
+        ),
+    ]);
   }
 
   Future<void> _onStyleLoaded(StyleController style) async {

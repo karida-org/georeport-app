@@ -15,7 +15,8 @@ class ChangesPage {
 
   factory ChangesPage.fromJson(Map<String, dynamic> json) {
     final issues = <BundleIssue>[];
-    for (final entry in json['issues'] as List<dynamic>? ?? const []) {
+    final rawIssues = json['issues'];
+    for (final entry in rawIssues is List ? rawIssues : const <Object>[]) {
       if (entry is! Map<String, dynamic>) {
         continue;
       }
@@ -34,10 +35,11 @@ class ChangesPage {
       issues: issues,
       nextSince: json['next_since'] as String? ?? '',
       more: json['more'] == true,
-      knownIds: (json['known_ids'] as List<dynamic>?)
-          ?.whereType<num>()
-          .map((id) => id.toInt())
-          .toSet(),
+      knownIds: switch (json['known_ids']) {
+        final List<dynamic> ids =>
+          ids.whereType<num>().map((id) => id.toInt()).toSet(),
+        _ => null,
+      },
     );
   }
 
