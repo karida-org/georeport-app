@@ -42,5 +42,5 @@ Georeport is GPL-3.0-or-later with an App Store additional permission
 under GPLv3 section 7 (see
 [LICENSE-APPSTORE-EXCEPTION](LICENSE-APPSTORE-EXCEPTION)), so the app can
 be distributed through app stores whose terms conflict with the plain
-GPL. By submitting a contribution you agree that it is licensed under the
-GPLv3 including this additional permission.
+GPL. By submitting a contribution you agree that it is licensed under
+GPL-3.0-or-later including this additional permission.
