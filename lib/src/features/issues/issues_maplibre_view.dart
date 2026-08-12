@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -43,7 +43,7 @@ class _IssuesMapLibreViewState extends ConsumerState<IssuesMapLibreView> {
 
   @override
   Widget build(BuildContext context) {
-    return MapLibreMap(
+    final map = MapLibreMap(
       options: const MapOptions(
         initStyle: _styleUrl,
         initCenter: Geographic(lon: 137.0, lat: 37.0),
@@ -54,6 +54,84 @@ class _IssuesMapLibreViewState extends ConsumerState<IssuesMapLibreView> {
       onEvent: _onEvent,
       children: const [SourceAttribution()],
     );
+    if (!kDebugMode) {
+      return map;
+    }
+    return Stack(
+      children: [
+        map,
+        Positioned(
+          left: 8,
+          bottom: 8,
+          child: IconButton.filledTonal(
+            icon: const Icon(Icons.download_for_offline),
+            tooltip: 'Dev: download visible region for offline use',
+            onPressed: _downloadVisibleRegion,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Debug-only evaluation hook for the MapLibre offline story (issue #4):
+  /// downloads the currently visible region into the offline cache and
+  /// reports tile counts. Real offline support is a roadmap item (M4).
+  Future<void> _downloadVisibleRegion() async {
+    final controller = _controller;
+    if (controller == null) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Downloading offline region...')),
+    );
+    // A small box around the camera center keeps the evaluation download
+    // fast; real offline scoping is an M4 design question.
+    final center = controller.getCamera().center;
+    final bounds = LngLatBounds(
+      longitudeWest: center.lon - 0.15,
+      longitudeEast: center.lon + 0.15,
+      latitudeSouth: center.lat - 0.1,
+      latitudeNorth: center.lat + 0.1,
+    );
+    debugPrint('[offline] bounds: $bounds, creating manager');
+    final manager = await OfflineManager.createInstance();
+    debugPrint('[offline] manager ready, starting download');
+    try {
+      DownloadProgress? last;
+      await for (final update in manager.downloadRegion(
+        mapStyleUrl: _styleUrl,
+        bounds: bounds,
+        minZoom: 8,
+        maxZoom: 12,
+        pixelDensity: 1,
+      )) {
+        last = update;
+        debugPrint(
+          '[offline] ${update.loadedTiles}/${update.totalTiles} tiles, '
+          'completed=${update.downloadCompleted}',
+        );
+        if (update.downloadCompleted) {
+          break;
+        }
+      }
+      final regions = await manager.listOfflineRegions();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Offline region ready: ${last?.loadedTiles ?? 0} tiles, '
+            '${((last?.loadedBytes ?? 0) / (1024 * 1024)).toStringAsFixed(1)} MB '
+            '(${regions.length} region(s) stored)',
+          ),
+        ),
+      );
+    } on Exception catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Offline download failed: $error')),
+      );
+    } finally {
+      manager.dispose();
+    }
   }
 
   @override
