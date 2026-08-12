@@ -8,7 +8,11 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/issue_document.dart';
 import '../../connections/connection_manager.dart';
 import '../../map/issue_style.dart';
+import '../../time/timers_notifier.dart';
 import '../../widgets/rich_text_body.dart';
+import '../time/quick_log_sheet.dart';
+import '../time/time_providers.dart';
+import '../time/timers_card.dart';
 import 'detail/attachments_section.dart';
 import 'detail/custom_fields_section.dart';
 import 'detail/issue_map_snippet.dart';
@@ -31,10 +35,53 @@ class IssueDetailScreen extends ConsumerWidget {
     });
     final l10n = AppLocalizations.of(context);
     final document = ref.watch(issueDocumentProvider(issueId));
+    // Time actions appear only when the server has the contract AND this
+    // user may log time on this issue; the feature hides instead of 403ing.
+    final canLogTime =
+        ref.watch(timeCapabilitiesProvider).canCreate &&
+        (document.value?.editable.canLogTime ?? false);
+    // Rebuild on timer changes so the play/pause toggle tracks state.
+    ref.watch(timersProvider);
+    final timer = ref.read(timersProvider.notifier).timerFor(issueId);
     return Scaffold(
       appBar: AppBar(
         title: Text('#$issueId'),
         actions: [
+          if (document.value case final IssueDocument issue
+              when canLogTime) ...[
+            IconButton(
+              icon: Icon(
+                (timer?.isRunning ?? false) ? Icons.pause : Icons.play_arrow,
+              ),
+              tooltip: (timer?.isRunning ?? false)
+                  ? l10n.timerPauseTooltip
+                  : l10n.timerStartTooltip,
+              onPressed: () async {
+                final notifier = ref.read(timersProvider.notifier);
+                if (timer?.isRunning ?? false) {
+                  await notifier.pause(issueId);
+                } else {
+                  final paused = await notifier.start(
+                    issueId: issueId,
+                    projectId: issue.project.id,
+                    subject: issue.subject,
+                  );
+                  if (paused != null && context.mounted) {
+                    showAutoPauseUndo(context, ref, paused);
+                  }
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.more_time),
+              tooltip: l10n.timeLogButton,
+              onPressed: () => showQuickLogSheet(
+                context,
+                issueId: issueId,
+                projectId: issue.project.id,
+              ),
+            ),
+          ],
           if (document.value case final IssueDocument issue)
             IconButton(
               icon: const Icon(Icons.link),

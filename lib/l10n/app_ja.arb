@@ -108,5 +108,45 @@
   "outboxDiscardBody": "このレポートの写真と入力内容は失われます。",
   "navHome": "ホーム",
   "navIssues": "チケット",
-  "homeActionIssues": "担当チケット"
+  "homeActionIssues": "担当チケット",
+  "timeLogTitle": "時間を記録",
+  "timeLogButton": "時間を記録",
+  "timeLogged": "時間を記録しました。",
+  "timeHoursLabel": "時間数",
+  "timeActivityLabel": "作業分類",
+  "timeCommentLabel": "コメント",
+  "timeSpentOnLabel": "日付",
+  "timeHoursInvalid": "時間数は0より大きい数値で入力してください。",
+  "timeLogFailed": "時間を記録できませんでした: {message}",
+  "@timeLogFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "timerStartTooltip": "タイマーを開始",
+  "timerPauseTooltip": "タイマーを一時停止",
+  "timerPausedPrevious": "#{id} のタイマーを一時停止しました。",
+  "@timerPausedPrevious": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "undoButton": "元に戻す",
+  "timersCardTitle": "タイマー",
+  "timeSummaryTitle": "自分の時間",
+  "timeSummaryLine": "今日 {today} 時間 · 今週 {week} 時間",
+  "@timeSummaryLine": {
+    "placeholders": {
+      "today": {
+        "type": "String"
+      },
+      "week": {
+        "type": "String"
+      }
+    }
+  }
 }
