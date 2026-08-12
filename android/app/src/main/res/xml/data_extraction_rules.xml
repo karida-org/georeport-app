@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nothing this app stores belongs in a cloud backup:
+  - the outbox holds field photos and drafts that have not reached the server,
+  - the issue and session caches are re-fetchable from the instance,
+  - flutter_secure_storage keeps credentials whose Keystore key is NOT backed
+    up, so a restored copy would be undecryptable anyway.
+  Android 12+ reads this file; older versions honour android:allowBackup.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

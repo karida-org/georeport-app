@@ -43,6 +43,14 @@ const _dedupSkew = Duration(minutes: 2);
 /// of an entry found in that state first asks the server whether a matching
 /// issue (same author, project, subject, created since the entry was queued)
 /// already exists, and adopts it instead of creating a duplicate.
+/// The dedup probe's answer, so "no issue found" is distinguishable from
+/// "the probe itself could not run".
+class DraftIssueLookup {
+  const DraftIssueLookup(this.issueId);
+
+  final int? issueId;
+}
+
 class DraftSubmitter {
   DraftSubmitter({
     required this._api,
@@ -58,10 +66,21 @@ class DraftSubmitter {
     var current = draft;
     try {
       if (current.state == QueuedDraftState.creating) {
-        final existing = await _findExisting(current);
-        if (existing != null) {
-          await _store.claimIssue(existing);
-          return SubmitCreated(existing);
+        // The dedup probe uses stock /issues.json, OUTSIDE this contract, so
+        // a narrow OAuth scope or role can refuse it. A refused probe says
+        // nothing about whether the issue exists, so it must not be
+        // classified like a failed create: retry later and ask again.
+        final DraftIssueLookup existing;
+        try {
+          existing = DraftIssueLookup(await _findExisting(current));
+        } on DioException catch (error) {
+          return SubmitRetryLater(
+            await _retryLater(current, error, provenUnsent: false),
+          );
+        }
+        if (existing.issueId != null) {
+          await _store.claimIssue(existing.issueId!);
+          return SubmitCreated(existing.issueId!);
         }
         // Provably not created; safe to continue as a normal attempt.
       }

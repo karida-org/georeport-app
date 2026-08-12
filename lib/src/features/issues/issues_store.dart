@@ -94,8 +94,12 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
     final Bundle bundle;
     try {
       bundle = await client.bundle();
-    } on Exception {
-      // The store surfaces AsyncError; the menu's status must agree.
+      // Catch-all on purpose: a server payload with an unexpected shape
+      // throws TypeError, which is an Error rather than an Exception, and
+      // would otherwise skip past this and leave the menu reporting a
+      // healthy sync while the store sat in AsyncError.
+      // ignore: avoid_catches_without_on_clauses
+    } catch (_) {
       _recordSync(healthy: false);
       rethrow;
     }
@@ -154,7 +158,10 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
       state = AsyncData(next);
       _recordSync(healthy: true);
       await _persist(next);
-    } on Exception {
+      // Same reasoning as build(): a malformed page must not leave the
+      // status claiming health.
+      // ignore: avoid_catches_without_on_clauses
+    } catch (_) {
       _recordSync(healthy: false);
       rethrow;
     }
