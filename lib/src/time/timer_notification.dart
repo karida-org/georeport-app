@@ -46,7 +46,10 @@ class TimerNotifications {
   Future<void> _initialize(TimerActionHandler onAction) async {
     await _plugin.initialize(
       settings: InitializationSettings(
-        android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
+        // Not the launcher icon: Android masks a notification's small icon
+        // to its alpha channel, and the opaque launcher mipmap renders as a
+        // solid white square in the status bar.
+        android: const AndroidInitializationSettings('ic_notification'),
         iOS: DarwinInitializationSettings(
           // Asked lazily when the first timer starts, not at app launch.
           requestAlertPermission: false,

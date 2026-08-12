@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -7,10 +8,17 @@ import '../features/issues/issue_providers.dart';
 
 /// Bytes of a same-instance asset, fetched with the active connection's
 /// credentials (plain `Image.network` cannot carry the bearer token).
-/// keepAlive caches the bytes for the session.
+///
+/// Deliberately NOT kept alive for the session: this is an unbounded family
+/// (one entry per attachment URL), and pinning every photo a user scrolled
+/// past would grow without limit on a device with little memory. A short
+/// grace period keeps scrolling back and forth cheap, and Flutter's own image
+/// cache still holds the decoded frames.
 final authedImageProvider = FutureProvider.autoDispose
     .family<Uint8List, String>((ref, urlOrPath) {
-      ref.keepAlive();
+      final link = ref.keepAlive();
+      final timer = Timer(const Duration(minutes: 2), link.close);
+      ref.onDispose(timer.cancel);
       return ref.watch(activeClientProvider).fetchBytes(urlOrPath);
     });
 

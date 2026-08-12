@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Georeport connects to whichever Redmine the user configures, and many
+  self-hosted instances live on a LAN over plain HTTP (a development server on
+  localhost is the obvious case). Android 9+ blocks cleartext by default, so
+  without this file those instances simply fail to connect on release builds
+  while working in debug - the confusing kind of difference.
+
+  Cleartext is therefore permitted, and the app is honest about the trade-off
+  where the user chooses the URL rather than silently downgrading them. HTTPS
+  is still what a public deployment should use.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <!-- Lets an operator install a private CA for an internal HTTPS
+                 Redmine without repackaging the app. -->
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

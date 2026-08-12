@@ -61,9 +61,11 @@ class _TodayRow extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final summary = issue.summary;
     final dueDate = summary.dueDate!;
-    final overdue = dueDate.isBefore(
-      DateTime.now().copyWith(hour: 0, minute: 0, second: 0),
-    );
+    // Date-only midnight: copyWith keeps the current milliseconds, which put
+    // the threshold a few hundred ms past midnight and made everything due
+    // TODAY compare as overdue.
+    final now = DateTime.now();
+    final overdue = dueDate.isBefore(DateTime(now.year, now.month, now.day));
     final destination = representativePoint(issue.geometry);
     return ListTile(
       contentPadding: EdgeInsets.zero,
