@@ -15,12 +15,17 @@ List<String> newlyAdvertisedScopes({
   required List<String> granted,
   required List<String> advertised,
 }) {
-  if (granted.isEmpty) {
+  final held = _normalize(granted);
+  if (held.isEmpty) {
     return const [];
   }
-  final held = granted.toSet();
-  return advertised.where((scope) => !held.contains(scope)).toList();
+  return _normalize(advertised).difference(held).toList();
 }
+
+/// Scope lists as sets: empty entries dropped, duplicates collapsed, so a
+/// sloppy server list neither reports false drift nor changes a fingerprint.
+Set<String> _normalize(List<String> scopes) =>
+    scopes.where((scope) => scope.isNotEmpty).toSet();
 
 final scopeDriftDismissalsProvider = Provider<ScopeDriftDismissals>(
   (ref) => ScopeDriftDismissals(),
@@ -40,7 +45,7 @@ class ScopeDriftDismissals {
 
   /// A stable fingerprint of an advertised scope set, order-insensitive.
   static String _fingerprint(List<String> advertised) =>
-      (advertised.toList()..sort()).join(' ');
+      (_normalize(advertised).toList()..sort()).join(' ');
 
   Future<bool> isDismissed(String connectionId, List<String> advertised) async {
     final dismissed = await _prefs.getString(_key(connectionId));

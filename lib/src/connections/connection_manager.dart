@@ -190,6 +190,7 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
         capabilities: active.capabilities,
         styleSettings: active.styleSettings,
         currentUser: active.currentUser,
+        newScopes: active.newScopes,
       );
     }
     state = AsyncData(

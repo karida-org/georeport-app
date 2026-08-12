@@ -41,6 +41,17 @@ void main() {
         isEmpty,
       );
     });
+
+    test('duplicates and empty entries in a sloppy list are not drift', () {
+      expect(
+        newlyAdvertisedScopes(
+          granted: ['view_issues'],
+          advertised: ['view_issues', 'view_issues', '', 'log_time'],
+        ),
+        ['log_time'],
+      );
+      expect(newlyAdvertisedScopes(granted: [''], advertised: ['a']), isEmpty);
+    });
   });
 
   group('ScopeDriftDismissals', () {
@@ -65,6 +76,12 @@ void main() {
       final dismissals = ScopeDriftDismissals();
       await dismissals.dismiss('c1', ['a', 'b']);
       expect(await dismissals.isDismissed('c1', ['a', 'b', 'c']), isFalse);
+    });
+
+    test('duplicates do not change the fingerprint', () async {
+      final dismissals = ScopeDriftDismissals();
+      await dismissals.dismiss('c1', ['a', 'b']);
+      expect(await dismissals.isDismissed('c1', ['a', 'a', 'b', '']), isTrue);
     });
 
     test('clear forgets the record', () async {
