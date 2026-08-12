@@ -72,5 +72,20 @@
   "captureFieldsNumeric": "数値で入力してください: {fields}",
   "captureFieldNone": "なし",
   "captureLocationDenied": "位置情報の利用が許可されていません。",
-  "captureLocationFailed": "現在地を取得できませんでした。"
+  "captureLocationFailed": "現在地を取得できませんでした。",
+  "captureQueuedOffline": "送信トレイに保存しました。自動的に再送信を試みます。",
+  "captureNotConnected": "接続されていません。再度サインインしてから送信してください。",
+  "outboxTitle": "送信トレイ",
+  "outboxEmpty": "送信待ちのレポートはありません。",
+  "outboxBannerWaiting": "{count, plural, other{{count}件のレポートが送信待ちです}}",
+  "@outboxBannerWaiting": {"placeholders": {"count": {"type": "int"}}},
+  "outboxBannerFailed": "{count, plural, other{{count}件のレポートを送信できませんでした}}",
+  "@outboxBannerFailed": {"placeholders": {"count": {"type": "int"}}},
+  "outboxStateWaiting": "{count, plural, =0{送信待ち} other{送信待ち・写真{count}枚}}",
+  "@outboxStateWaiting": {"placeholders": {"count": {"type": "int"}}},
+  "outboxStateFailed": "サーバーに拒否されました",
+  "outboxRetry": "今すぐ再試行",
+  "outboxDiscard": "破棄",
+  "outboxDiscardTitle": "このレポートを破棄しますか?",
+  "outboxDiscardBody": "このレポートの写真と入力内容は失われます。"
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/bundle.dart';
 import '../../connections/connection_manager.dart';
+import '../outbox/outbox_banner.dart';
 import 'issues_list_view.dart';
 import 'issues_maplibre_view.dart';
 import 'issues_store.dart';
@@ -40,9 +41,6 @@ class IssuesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final issues = ref.watch(issuesProvider);
-    final active = ref.watch(connectionManagerProvider).value?.active;
-    final currentUser = active?.currentUser;
-    final filter = ref.watch(myWorkFilterProvider);
 
     return DefaultTabController(
       length: 2,
@@ -76,77 +74,96 @@ class IssuesScreen extends ConsumerWidget {
             ],
           ),
         ),
-        body: issues.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+        body: Column(
+          children: [
+            // Above the async branches: while offline the issue fetch fails,
+            // and that is exactly when the outbox needs its entry point.
+            const OutboxBanner(),
+            Expanded(child: _buildIssues(context, ref, issues)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIssues(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<IssuesState> issues,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final active = ref.watch(connectionManagerProvider).value?.active;
+    final currentUser = active?.currentUser;
+    final filter = ref.watch(myWorkFilterProvider);
+    return issues.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.issuesLoadFailed('$error'),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => ref.invalidate(issuesProvider),
+                child: Text(l10n.retryButton),
+              ),
+            ],
+          ),
+        ),
+      ),
+      data: (data) {
+        final visible = _filtered(
+          data.sorted,
+          filter,
+          currentUser?.displayName,
+        );
+        return Column(
+          children: [
+            if (currentUser != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: SegmentedButton<MyWorkFilter>(
+                  segments: [
+                    ButtonSegment(
+                      value: MyWorkFilter.mine,
+                      label: Text(l10n.myWorkFilterMine),
+                      icon: const Icon(Icons.person),
+                    ),
+                    ButtonSegment(
+                      value: MyWorkFilter.all,
+                      label: Text(l10n.myWorkFilterAll),
+                      icon: const Icon(Icons.group),
+                    ),
+                  ],
+                  selected: {filter},
+                  onSelectionChanged: (selection) => ref
+                      .read(myWorkFilterProvider.notifier)
+                      .select(selection.single),
+                ),
+              ),
+            Expanded(
+              child: TabBarView(
                 children: [
-                  Text(
-                    l10n.issuesLoadFailed('$error'),
-                    textAlign: TextAlign.center,
+                  IssuesListView(
+                    issues: visible,
+                    projects: data.projects,
+                    style: active?.styleSettings,
                   ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () => ref.invalidate(issuesProvider),
-                    child: Text(l10n.retryButton),
+                  IssuesMapLibreView(
+                    issues: visible,
+                    styleSettings: active?.styleSettings,
                   ),
                 ],
               ),
             ),
-          ),
-          data: (data) {
-            final visible = _filtered(
-              data.sorted,
-              filter,
-              currentUser?.displayName,
-            );
-            return Column(
-              children: [
-                if (currentUser != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                    child: SegmentedButton<MyWorkFilter>(
-                      segments: [
-                        ButtonSegment(
-                          value: MyWorkFilter.mine,
-                          label: Text(l10n.myWorkFilterMine),
-                          icon: const Icon(Icons.person),
-                        ),
-                        ButtonSegment(
-                          value: MyWorkFilter.all,
-                          label: Text(l10n.myWorkFilterAll),
-                          icon: const Icon(Icons.group),
-                        ),
-                      ],
-                      selected: {filter},
-                      onSelectionChanged: (selection) => ref
-                          .read(myWorkFilterProvider.notifier)
-                          .select(selection.single),
-                    ),
-                  ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      IssuesListView(
-                        issues: visible,
-                        projects: data.projects,
-                        style: active?.styleSettings,
-                      ),
-                      IssuesMapLibreView(
-                        issues: visible,
-                        styleSettings: active?.styleSettings,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+          ],
+        );
+      },
     );
   }
 

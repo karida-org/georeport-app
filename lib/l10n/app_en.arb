@@ -162,5 +162,20 @@
   },
   "captureFieldNone": "None",
   "captureLocationDenied": "Location permission was not granted.",
-  "captureLocationFailed": "Could not get your location."
+  "captureLocationFailed": "Could not get your location.",
+  "captureQueuedOffline": "Saved to outbox. The app will keep trying to submit it automatically.",
+  "captureNotConnected": "Not connected. Sign in again to submit this report.",
+  "outboxTitle": "Outbox",
+  "outboxEmpty": "Nothing waiting to upload.",
+  "outboxBannerWaiting": "{count, plural, =1{1 report waiting to upload} other{{count} reports waiting to upload}}",
+  "@outboxBannerWaiting": {"placeholders": {"count": {"type": "int"}}},
+  "outboxBannerFailed": "{count, plural, =1{1 report could not be submitted} other{{count} reports could not be submitted}}",
+  "@outboxBannerFailed": {"placeholders": {"count": {"type": "int"}}},
+  "outboxStateWaiting": "{count, plural, =0{Waiting to upload} =1{Waiting to upload, 1 photo} other{Waiting to upload, {count} photos}}",
+  "@outboxStateWaiting": {"placeholders": {"count": {"type": "int"}}},
+  "outboxStateFailed": "Rejected by the server",
+  "outboxRetry": "Retry now",
+  "outboxDiscard": "Discard",
+  "outboxDiscardTitle": "Discard this report?",
+  "outboxDiscardBody": "The photos and details of this report will be lost."
 }

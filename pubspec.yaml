@@ -8,11 +8,13 @@ environment:
 
 dependencies:
   app_links: ^7.2.1
+  connectivity_plus: ^7.3.1
   crypto: ^3.0.7
   dio: ^5.11.0
   exif: ^3.3.0
   flutter:
     sdk: flutter
+  flutter_image_compress: ^2.5.1
   flutter_localizations:
     sdk: flutter
   flutter_markdown_plus: ^1.0.12
@@ -25,6 +27,7 @@ dependencies:
   intl: any
   latlong2: ^0.10.1
   maplibre: ^0.3.5
+  path_provider: ^2.1.6
   shared_preferences: ^2.5.4
   url_launcher: ^6.3.2
 
