@@ -268,5 +268,24 @@
         "type": "String"
       }
     }
-  }
+  },
+  "todayCardTitle": "{count, plural, =1{Today: 1 issue} other{Today: {count} issues}}",
+  "@todayCardTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todayCardMore": "{count, plural, =1{1 more in the list} other{{count} more in the list}}",
+  "@todayCardMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todayNavigateTooltip": "Navigate there",
+  "todayNavigateFailed": "Could not open the maps app.",
+  "myWorkFilterToday": "Today"
 }

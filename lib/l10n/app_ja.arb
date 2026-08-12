@@ -178,5 +178,24 @@
         "type": "String"
       }
     }
-  }
+  },
+  "todayCardTitle": "{count, plural, other{今日の作業: {count}件}}",
+  "@todayCardTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todayCardMore": "{count, plural, other{ほか{count}件は一覧へ}}",
+  "@todayCardMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todayNavigateTooltip": "ここへナビ",
+  "todayNavigateFailed": "地図アプリを開けませんでした。",
+  "myWorkFilterToday": "今日"
 }

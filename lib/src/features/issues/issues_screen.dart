@@ -5,13 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/bundle.dart';
 import '../../connections/connection_manager.dart';
+import '../home/today_providers.dart';
 import '../outbox/outbox_banner.dart';
 import 'issues_list_view.dart';
 import 'issues_maplibre_view.dart';
 import 'issues_store.dart';
 
 /// Which slice of the loaded issues My Work shows.
-enum MyWorkFilter { mine, all }
+enum MyWorkFilter { today, mine, all }
 
 /// Defaults to "mine" when the signed-in account is known; the whole filter
 /// is hidden (and everything shown) when it is not.
@@ -134,6 +135,11 @@ class IssuesScreen extends ConsumerWidget {
                 child: SegmentedButton<MyWorkFilter>(
                   segments: [
                     ButtonSegment(
+                      value: MyWorkFilter.today,
+                      label: Text(l10n.myWorkFilterToday),
+                      icon: const Icon(Icons.today),
+                    ),
+                    ButtonSegment(
                       value: MyWorkFilter.mine,
                       label: Text(l10n.myWorkFilterMine),
                       icon: const Icon(Icons.person),
@@ -178,6 +184,15 @@ class IssuesScreen extends ConsumerWidget {
   ) {
     if (filter == MyWorkFilter.all || displayName == null) {
       return issues;
+    }
+    if (filter == MyWorkFilter.today) {
+      // The day's plate, in list or map form: same selection as the
+      // dashboard's Today card.
+      return todayIssues(
+        issues,
+        assigneeDisplayName: displayName,
+        today: DateTime.now(),
+      );
     }
     return [
       for (final issue in issues)
