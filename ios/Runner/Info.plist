@@ -19,6 +19,11 @@
 		<string>Photos you pick are attached to the issue you are reporting.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Your location suggests where the issue you are reporting is.</string>
+		<!-- The OAuth callback is consumed by app_links; Flutter's built-in
+		     deep-link navigation would also route it and land the router on
+		     an unknown georeport:// location. -->
+		<key>FlutterDeepLinkingEnabled</key>
+		<false/>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>

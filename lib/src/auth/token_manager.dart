@@ -77,12 +77,14 @@ class TokenManager {
     try {
       var fresh = await future;
       // Doorkeeper rotates refresh tokens only when configured to; keep the
-      // old one when the response omits it.
-      if (fresh.refreshToken == null) {
+      // old one when the response omits it. Same for the scope field: per
+      // RFC 6749 an omitted scope on refresh means "unchanged".
+      if (fresh.refreshToken == null || fresh.scopes.isEmpty) {
         fresh = OAuthTokens(
           accessToken: fresh.accessToken,
-          refreshToken: _tokens.refreshToken,
+          refreshToken: fresh.refreshToken ?? _tokens.refreshToken,
           expiresAt: fresh.expiresAt,
+          scopes: fresh.scopes.isEmpty ? _tokens.scopes : fresh.scopes,
         );
       }
       _tokens = fresh;

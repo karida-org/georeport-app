@@ -61,6 +61,33 @@ void main() {
     },
   );
 
+  test('a refresh response without scope keeps the granted scopes', () async {
+    final manager = TokenManager(
+      tokenUrl: 'https://demo.example.org/oauth/token',
+      clientId: 'abc',
+      tokens: OAuthTokens(
+        accessToken: 'stale',
+        refreshToken: 'r1',
+        expiresAt: DateTime.now().subtract(const Duration(minutes: 1)),
+        scopes: const ['view_issues', 'log_time'],
+      ),
+      onTokensChanged: (_) async {},
+      refresher:
+          ({
+            required Dio dio,
+            required String tokenUrl,
+            required String clientId,
+            required String refreshToken,
+          }) async =>
+              // RFC 6749: an omitted scope on refresh means "unchanged".
+              const OAuthTokens(accessToken: 'renewed', refreshToken: 'r2'),
+    );
+
+    await manager.accessToken();
+    expect(manager.tokens.refreshToken, 'r2');
+    expect(manager.tokens.scopes, ['view_issues', 'log_time']);
+  });
+
   test('forceRefresh reports failure without throwing', () async {
     final manager = TokenManager(
       tokenUrl: 'https://demo.example.org/oauth/token',
