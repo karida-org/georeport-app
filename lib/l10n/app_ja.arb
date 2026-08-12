@@ -228,5 +228,13 @@
   "settingsOssLicenses": "オープンソースライセンス",
   "issueShareTooltip": "共有",
   "timerNotificationChannelName": "実行中のタイマー",
-  "timerNotificationChannelDescription": "タイマーの実行中に通知でお知らせします。"
+  "timerNotificationChannelDescription": "タイマーの実行中に通知でお知らせします。",
+  "mapControlsTooltip": "地図オプション",
+  "mapDownloadArea": "この範囲をオフライン用に保存",
+  "mapDownloadAreaHint": "現在表示中の周辺の地図を端末に保存します。",
+  "mapDownloadDone": "保存しました: {tiles} タイル、{size} MB。",
+  "mapDownloadFailed": "保存できませんでした: {message}",
+  "mapRemoveStoredAreas": "保存した範囲を削除",
+  "mapStoredAreas": "{count, plural, other{保存済み: {count} 件}}",
+  "mapRemoveStoredAreasDone": "保存した範囲を削除しました。"
 }

@@ -339,5 +339,37 @@
   },
   "issueShareTooltip": "Share",
   "timerNotificationChannelName": "Running timer",
-  "timerNotificationChannelDescription": "Reminds you while a timer is running."
+  "timerNotificationChannelDescription": "Reminds you while a timer is running.",
+  "mapControlsTooltip": "Map options",
+  "mapDownloadArea": "Save this area for offline use",
+  "mapDownloadAreaHint": "Stores the map around the current view on this device.",
+  "mapDownloadDone": "Area saved: {tiles} tiles, {size} MB.",
+  "mapDownloadFailed": "Could not save the area: {message}",
+  "mapRemoveStoredAreas": "Remove saved areas",
+  "mapStoredAreas": "{count, plural, =1{1 saved area} other{{count} saved areas}}",
+  "mapRemoveStoredAreasDone": "Saved areas removed.",
+  "@mapDownloadDone": {
+    "placeholders": {
+      "tiles": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "@mapDownloadFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@mapStoredAreas": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

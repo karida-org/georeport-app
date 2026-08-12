@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maplibre/maplibre.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/bundle.dart';
@@ -9,6 +10,7 @@ import '../outbox/outbox_banner.dart';
 import 'issues_list_view.dart';
 import 'issues_maplibre_view.dart';
 import 'issues_store.dart';
+import 'map_controls_sheet.dart';
 import 'my_work_filter.dart';
 
 /// How an [IssuesView] presents the loaded issues.
@@ -18,13 +20,25 @@ enum IssuesViewMode { list, map }
 /// My Work filter, and the loaded issues as a list or a map. Both screens
 /// watch the same providers, so the filter selection and loaded data carry
 /// over when switching between them.
-class IssuesView extends ConsumerWidget {
+class IssuesView extends ConsumerStatefulWidget {
   const IssuesView({required this.mode, super.key});
 
   final IssuesViewMode mode;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<IssuesView> createState() => _IssuesViewState();
+}
+
+class _IssuesViewState extends ConsumerState<IssuesView> {
+  /// Held for the map-controls button beside the filter row; the map view
+  /// hands it up when created and takes it back on dispose.
+  MapController? _mapController;
+
+  IssuesViewMode get mode => widget.mode;
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final issues = ref.watch(issuesProvider);
     return Column(
       children: [
@@ -72,33 +86,57 @@ class IssuesView extends ConsumerWidget {
           filter,
           currentUser?.displayName,
         );
+        final mapControls = mode == IssuesViewMode.map;
         return Column(
           children: [
-            if (currentUser != null)
+            if (currentUser != null || mapControls)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                child: SegmentedButton<MyWorkFilter>(
-                  segments: [
-                    ButtonSegment(
-                      value: MyWorkFilter.today,
-                      label: Text(l10n.myWorkFilterToday),
-                      icon: const Icon(Icons.today),
-                    ),
-                    ButtonSegment(
-                      value: MyWorkFilter.mine,
-                      label: Text(l10n.myWorkFilterMine),
-                      icon: const Icon(Icons.person),
-                    ),
-                    ButtonSegment(
-                      value: MyWorkFilter.all,
-                      label: Text(l10n.myWorkFilterAll),
-                      icon: const Icon(Icons.group),
-                    ),
+                child: Row(
+                  children: [
+                    if (currentUser != null)
+                      Expanded(
+                        child: SegmentedButton<MyWorkFilter>(
+                          segments: [
+                            ButtonSegment(
+                              value: MyWorkFilter.today,
+                              label: Text(l10n.myWorkFilterToday),
+                              icon: const Icon(Icons.today),
+                            ),
+                            ButtonSegment(
+                              value: MyWorkFilter.mine,
+                              label: Text(l10n.myWorkFilterMine),
+                              icon: const Icon(Icons.person),
+                            ),
+                            ButtonSegment(
+                              value: MyWorkFilter.all,
+                              label: Text(l10n.myWorkFilterAll),
+                              icon: const Icon(Icons.group),
+                            ),
+                          ],
+                          selected: {filter},
+                          onSelectionChanged: (selection) => ref
+                              .read(myWorkFilterProvider.notifier)
+                              .select(selection.single),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    if (mapControls) ...[
+                      const SizedBox(width: 8),
+                      IconButton.outlined(
+                        icon: const Icon(Icons.tune),
+                        tooltip: l10n.mapControlsTooltip,
+                        onPressed: _mapController == null
+                            ? null
+                            : () => showMapControlsSheet(
+                                context,
+                                controller: _mapController!,
+                                styleUrl: mapStyleUrl,
+                              ),
+                      ),
+                    ],
                   ],
-                  selected: {filter},
-                  onSelectionChanged: (selection) => ref
-                      .read(myWorkFilterProvider.notifier)
-                      .select(selection.single),
                 ),
               ),
             Expanded(
@@ -111,6 +149,11 @@ class IssuesView extends ConsumerWidget {
                 IssuesViewMode.map => IssuesMapLibreView(
                   issues: visible,
                   styleSettings: active?.styleSettings,
+                  onController: (controller) {
+                    if (mounted) {
+                      setState(() => _mapController = controller);
+                    }
+                  },
                 ),
               },
             ),
