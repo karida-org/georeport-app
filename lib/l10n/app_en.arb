@@ -91,5 +91,39 @@
       }
     }
   },
-  "issueJournalUnset": "(none)"
+  "issueJournalUnset": "(none)",
+  "captureTitle": "New issue",
+  "capturePhotoCamera": "Camera",
+  "capturePhotoGallery": "Gallery",
+  "captureNoLocation": "No location",
+  "captureNoLocationHint": "Attach a geotagged photo or choose a spot on the map.",
+  "captureLocationFromPhoto": "Suggested from the photo",
+  "captureEditLocation": "Choose on the map",
+  "captureClearLocation": "Remove location",
+  "captureLocationTitle": "Choose location",
+  "captureUseThisLocation": "Use this location",
+  "captureUseCurrentLocation": "My location",
+  "captureTrackerLabel": "Type",
+  "captureSubjectLabel": "Subject",
+  "captureDescriptionLabel": "Description",
+  "captureMoreFields": "More fields",
+  "captureSubmitButton": "Create issue",
+  "captureSubjectRequired": "A subject is required.",
+  "captureFieldsRequired": "Required: {fields}",
+  "@captureFieldsRequired": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "captureCreated": "Issue #{id} created.",
+  "@captureCreated": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "captureNoTrackers": "No trackers are available in this project."
 }

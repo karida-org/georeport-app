@@ -8,6 +8,12 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Georeport</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Photos you take document the issue you are reporting.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Photos you pick are attached to the issue you are reporting.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location suggests where the issue you are reporting is.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

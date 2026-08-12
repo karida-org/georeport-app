@@ -1,0 +1,456 @@
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
+
+import '../../../l10n/generated/app_localizations.dart';
+import '../../api/models/project_schema.dart';
+import '../../capture/exif_location.dart';
+import '../../capture/issue_draft.dart';
+import '../issues/issues_store.dart';
+import 'capture_providers.dart';
+import 'custom_field_editor.dart';
+import 'location_picker_screen.dart';
+
+/// The capture flow: photos first, then a minimal schema-driven form.
+/// Required fields surface automatically; everything optional folds away.
+class CaptureScreen extends ConsumerStatefulWidget {
+  const CaptureScreen({super.key});
+
+  @override
+  ConsumerState<CaptureScreen> createState() => _CaptureScreenState();
+}
+
+class _CaptureScreenState extends ConsumerState<CaptureScreen> {
+  final _picker = ImagePicker();
+  final _subjectController = TextEditingController();
+  final _descriptionController = TextEditingController();
+
+  final List<DraftPhoto> _photos = [];
+  int? _projectId;
+  int? _trackerId;
+  LatLng? _location;
+  bool _locationFromExif = false;
+  bool _showOptionalFields = false;
+  final Map<int, Object> _customFieldValues = {};
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _subjectController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addPhoto(ImageSource source) async {
+    final images = source == ImageSource.gallery
+        ? await _picker.pickMultiImage()
+        : [await _picker.pickImage(source: source)].nonNulls.toList();
+    for (final image in images) {
+      final bytes = await image.readAsBytes();
+      setState(() {
+        _photos.add(DraftPhoto(filename: image.name, bytes: bytes));
+      });
+      // First geotagged photo wins the location suggestion; the user can
+      // still adjust or clear it.
+      if (_location == null) {
+        final suggested = await exifLocationOf(Uint8List.fromList(bytes));
+        if (suggested != null && mounted) {
+          setState(() {
+            _location = suggested;
+            _locationFromExif = true;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _editLocation() async {
+    final picked = await Navigator.push<LatLng>(
+      context,
+      MaterialPageRoute<LatLng>(
+        builder: (context) => LocationPickerScreen(initial: _location),
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _location = picked;
+        _locationFromExif = false;
+      });
+    }
+  }
+
+  Future<void> _submit(ProjectSchema schema) async {
+    final l10n = AppLocalizations.of(context);
+    final missing = [
+      for (final field in schema.fieldsForTracker(_trackerId!))
+        if (field.required && _customFieldValues[field.id] == null) field.name,
+    ];
+    if (_subjectController.text.trim().isEmpty) {
+      setState(() => _error = l10n.captureSubjectRequired);
+      return;
+    }
+    if (missing.isNotEmpty) {
+      setState(() => _error = l10n.captureFieldsRequired(missing.join(', ')));
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      final draft = IssueDraft(
+        projectId: _projectId!,
+        trackerId: _trackerId!,
+        subject: _subjectController.text.trim(),
+        description: _descriptionController.text.trim(),
+        location: _location,
+        photos: List.of(_photos),
+        customFieldValues: Map.of(_customFieldValues),
+      );
+      final issueId = await ref.read(submitDraftProvider)(draft);
+      ref.invalidate(issuesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.captureCreated(issueId))));
+        context.go('/issues/$issueId');
+      }
+      // The draft survives any failure; only success leaves the screen.
+      // ignore: avoid_catches_without_on_clauses
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = '$error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final issues = ref.watch(issuesProvider).value;
+    final projects = issues?.projects ?? const [];
+    _projectId ??= projects.isNotEmpty ? projects.first.id : null;
+    final projectId = _projectId;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.captureTitle)),
+      body: projectId == null
+          ? Center(child: Text(l10n.issuesEmpty))
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _PhotoStrip(
+                  photos: _photos,
+                  onCamera: _submitting
+                      ? null
+                      : () => _addPhoto(ImageSource.camera),
+                  onGallery: _submitting
+                      ? null
+                      : () => _addPhoto(ImageSource.gallery),
+                  onRemove: (index) => setState(() => _photos.removeAt(index)),
+                ),
+                const SizedBox(height: 16),
+                _LocationCard(
+                  location: _location,
+                  fromExif: _locationFromExif,
+                  onEdit: _submitting ? null : _editLocation,
+                  onClear: _location == null || _submitting
+                      ? null
+                      : () => setState(() {
+                          _location = null;
+                          _locationFromExif = false;
+                        }),
+                ),
+                const SizedBox(height: 16),
+                if (projects.length > 1) ...[
+                  DropdownButtonFormField<int>(
+                    initialValue: projectId,
+                    decoration: InputDecoration(
+                      labelText: l10n.issueProjectLabel,
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: [
+                      for (final project in projects)
+                        DropdownMenuItem(
+                          value: project.id,
+                          child: Text(project.name),
+                        ),
+                    ],
+                    onChanged: _submitting
+                        ? null
+                        : (value) => setState(() {
+                            _projectId = value;
+                            _trackerId = null;
+                            _customFieldValues.clear();
+                          }),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                ref
+                    .watch(projectSchemaProvider(projectId))
+                    .when(
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      error: (error, _) =>
+                          Text(l10n.issuesLoadFailed('$error')),
+                      data: (schema) => _buildForm(l10n, schema),
+                    ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+    );
+  }
+
+  Widget _buildForm(AppLocalizations l10n, ProjectSchema schema) {
+    _trackerId ??= schema.trackers.isNotEmpty ? schema.trackers.first.id : null;
+    final trackerId = _trackerId;
+    if (trackerId == null) {
+      return Text(l10n.captureNoTrackers);
+    }
+    final fields = schema.fieldsForTracker(trackerId);
+    final required = fields.where((field) => field.required).toList();
+    final optional = fields.where((field) => !field.required).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DropdownButtonFormField<int>(
+          initialValue: trackerId,
+          decoration: InputDecoration(
+            labelText: l10n.captureTrackerLabel,
+            border: const OutlineInputBorder(),
+          ),
+          items: [
+            for (final tracker in schema.trackers)
+              DropdownMenuItem(value: tracker.id, child: Text(tracker.name)),
+          ],
+          onChanged: _submitting
+              ? null
+              : (value) => setState(() {
+                  _trackerId = value;
+                  _customFieldValues.clear();
+                }),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _subjectController,
+          enabled: !_submitting,
+          decoration: InputDecoration(
+            labelText: '${l10n.captureSubjectLabel} *',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _descriptionController,
+          enabled: !_submitting,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: l10n.captureDescriptionLabel,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        for (final field in required) ...[
+          const SizedBox(height: 16),
+          CustomFieldEditor(
+            field: field,
+            value: _customFieldValues[field.id],
+            onChanged: (value) => setState(() {
+              value == null
+                  ? _customFieldValues.remove(field.id)
+                  : _customFieldValues[field.id] = value;
+            }),
+          ),
+        ],
+        if (optional.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () =>
+                setState(() => _showOptionalFields = !_showOptionalFields),
+            icon: Icon(
+              _showOptionalFields ? Icons.expand_less : Icons.expand_more,
+            ),
+            label: Text(l10n.captureMoreFields),
+          ),
+          if (_showOptionalFields)
+            for (final field in optional) ...[
+              const SizedBox(height: 16),
+              CustomFieldEditor(
+                field: field,
+                value: _customFieldValues[field.id],
+                onChanged: (value) => setState(() {
+                  value == null
+                      ? _customFieldValues.remove(field.id)
+                      : _customFieldValues[field.id] = value;
+                }),
+              ),
+            ],
+        ],
+        const SizedBox(height: 24),
+        FilledButton(
+          onPressed: _submitting ? null : () => _submit(schema),
+          child: _submitting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(l10n.captureSubmitButton),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+}
+
+class _PhotoStrip extends StatelessWidget {
+  const _PhotoStrip({
+    required this.photos,
+    required this.onCamera,
+    required this.onGallery,
+    required this.onRemove,
+  });
+
+  final List<DraftPhoto> photos;
+  final VoidCallback? onCamera;
+  final VoidCallback? onGallery;
+  final ValueChanged<int> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (photos.isNotEmpty) ...[
+          SizedBox(
+            height: 96,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: photos.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) => Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      Uint8List.fromList(photos[index].bytes),
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: IconButton(
+                      icon: const Icon(Icons.cancel, size: 20),
+                      color: Colors.white,
+                      onPressed: () => onRemove(index),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onCamera,
+                icon: const Icon(Icons.photo_camera),
+                label: Text(l10n.capturePhotoCamera),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onGallery,
+                icon: const Icon(Icons.photo_library),
+                label: Text(l10n.capturePhotoGallery),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LocationCard extends StatelessWidget {
+  const _LocationCard({
+    required this.location,
+    required this.fromExif,
+    required this.onEdit,
+    required this.onClear,
+  });
+
+  final LatLng? location;
+  final bool fromExif;
+  final VoidCallback? onEdit;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final location = this.location;
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          location == null ? Icons.location_off : Icons.place,
+          color: location == null
+              ? Theme.of(context).colorScheme.outline
+              : Theme.of(context).colorScheme.primary,
+        ),
+        title: Text(
+          location == null
+              ? l10n.captureNoLocation
+              : '${location.latitude.toStringAsFixed(5)}, '
+                    '${location.longitude.toStringAsFixed(5)}',
+        ),
+        subtitle: location == null
+            ? Text(l10n.captureNoLocationHint)
+            : (fromExif ? Text(l10n.captureLocationFromPhoto) : null),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onClear != null)
+              IconButton(
+                icon: const Icon(Icons.clear),
+                tooltip: l10n.captureClearLocation,
+                onPressed: onClear,
+              ),
+            IconButton(
+              icon: const Icon(Icons.edit_location_alt),
+              tooltip: l10n.captureEditLocation,
+              onPressed: onEdit,
+            ),
+          ],
+        ),
+        onTap: onEdit,
+      ),
+    );
+  }
+}
