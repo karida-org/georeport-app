@@ -37,8 +37,6 @@
   "issueAuthorLabel": "作成者",
   "issueDoneRatioLabel": "進捗",
   "issueCustomFieldsHeading": "詳細",
-  "issueCopyLinkTooltip": "リンクをコピー",
-  "issueLinkCopied": "リンクをコピーしました。",
   "issueJournalEdited": "{name} が編集されました",
   "issueJournalUnset": "（なし）",
   "captureTitle": "新しいチケット",
@@ -227,5 +225,6 @@
   "settingsVersion": "バージョン {version}",
   "settingsLicenseLine": "GPL-3.0-or-later のフリーソフトウェアです。",
   "settingsSourceCode": "ソースコード",
-  "settingsOssLicenses": "オープンソースライセンス"
+  "settingsOssLicenses": "オープンソースライセンス",
+  "issueShareTooltip": "共有"
 }

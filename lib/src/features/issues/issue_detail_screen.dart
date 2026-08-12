@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/issue_document.dart';
@@ -84,17 +84,28 @@ class IssueDetailScreen extends ConsumerWidget {
             ),
           ],
           if (document.value case final IssueDocument issue)
-            IconButton(
-              icon: const Icon(Icons.link),
-              tooltip: l10n.issueCopyLinkTooltip,
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: issue.iri));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(l10n.issueLinkCopied)));
-                }
-              },
+            // One action covers both hand-offs: the system share sheet
+            // carries its own Copy, so a separate copy-link button would
+            // just duplicate it.
+            // Builder: the share sheet needs the button's own render box as
+            // the popover anchor on iPads.
+            Builder(
+              builder: (context) => IconButton(
+                icon: Icon(Icons.adaptive.share),
+                tooltip: l10n.issueShareTooltip,
+                onPressed: () {
+                  final box = context.findRenderObject() as RenderBox?;
+                  SharePlus.instance.share(
+                    ShareParams(
+                      subject: '#${issue.id} ${issue.subject}',
+                      text: '#${issue.id} ${issue.subject}\n${issue.iri}',
+                      sharePositionOrigin: box == null
+                          ? null
+                          : box.localToGlobal(Offset.zero) & box.size,
+                    ),
+                  );
+                },
+              ),
             ),
         ],
       ),
