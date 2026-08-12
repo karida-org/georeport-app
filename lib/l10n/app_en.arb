@@ -399,5 +399,24 @@
         "type": "String"
       }
     }
+  },
+  "captureStepPhotos": "Photos",
+  "captureStepLocation": "Location",
+  "captureStepProject": "Project and type",
+  "captureStepDetails": "Details",
+  "captureStepReview": "Review",
+  "captureStepCounter": "Step {current} of {total}",
+  "captureStepNext": "Next",
+  "captureStepBack": "Back",
+  "captureStepPhotosHint": "Photos document what you found. You can also continue without one.",
+  "@captureStepCounter": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   }
 }
