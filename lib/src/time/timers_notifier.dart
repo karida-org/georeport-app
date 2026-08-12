@@ -120,7 +120,10 @@ class TimersNotifier extends AsyncNotifier<List<IssueTimer>> {
   ];
 
   Future<void> _commit(List<IssueTimer> timers) async {
-    await _store?.save(timers);
+    // Resolve the store on demand: a mutation racing build() must still
+    // persist, or the survives-app-kill invariant silently breaks.
+    final store = _store ??= await ref.read(timerStoreProvider.future);
+    await store.save(timers);
     state = AsyncData(timers);
   }
 }

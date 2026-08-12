@@ -30,7 +30,7 @@ class TimerStore {
   }
 
   Future<void> save(List<IssueTimer> timers) async {
-    _file.parent.createSync(recursive: true);
+    await _file.parent.create(recursive: true);
     final temp = File('${_file.path}.tmp');
     await temp.writeAsString(
       jsonEncode([for (final timer in timers) timer.toJson()]),
