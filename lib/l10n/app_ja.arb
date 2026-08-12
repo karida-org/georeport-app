@@ -236,5 +236,13 @@
   "mapDownloadFailed": "保存できませんでした: {message}",
   "mapRemoveStoredAreas": "保存した範囲を削除",
   "mapStoredAreas": "{count, plural, other{保存済み: {count} 件}}",
-  "mapRemoveStoredAreasDone": "保存した範囲を削除しました。"
+  "mapRemoveStoredAreasDone": "保存した範囲を削除しました。",
+  "editIssueTitle": "チケットを編集",
+  "editIssueTooltip": "編集",
+  "issuePriorityLabel": "優先度",
+  "editIssueClearDue": "期日をクリア",
+  "editIssueAdjustLocation": "位置を調整",
+  "editIssueLocationChanged": "位置を調整しました",
+  "editIssueSaved": "チケットを更新しました。",
+  "editIssueFailed": "変更を保存できませんでした: {message}"
 }

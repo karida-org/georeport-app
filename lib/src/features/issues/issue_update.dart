@@ -20,9 +20,12 @@ Map<String, dynamic> buildIssueUpdatePayload({
   int? statusId,
   String? notes,
   List<Map<String, String>> uploads = const [],
+  Map<String, dynamic> fields = const {},
 }) {
   return {
     'issue': {
+      // Field edits first, so the versioning keys below always win.
+      ...fields,
       'lock_version': lockVersion,
       'status_id': ?statusId,
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
@@ -67,6 +70,7 @@ class IssueUpdater {
     int? statusId,
     String? notes,
     List<DraftPhoto> photos = const [],
+    Map<String, dynamic> fields = const {},
   }) async {
     final client = _ref.read(activeClientProvider);
     final uploads = <Map<String, String>>[];
@@ -87,6 +91,7 @@ class IssueUpdater {
           statusId: statusId,
           notes: notes,
           uploads: uploads,
+          fields: fields,
         ),
       );
     } on DioException catch (error) {
