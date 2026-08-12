@@ -29,8 +29,8 @@ class JournalDetail {
   factory JournalDetail.fromJson(Map<String, dynamic> json) {
     return JournalDetail(
       name: json['name'] as String? ?? '',
-      oldValue: (json['old_label'] ?? json['old_value']) as String?,
-      newValue: (json['new_label'] ?? json['new_value']) as String?,
+      oldValue: _displayString(json['old_label'] ?? json['old_value']),
+      newValue: _displayString(json['new_label'] ?? json['new_value']),
       diffUrl: json['diff_url'] as String?,
     );
   }
@@ -84,10 +84,14 @@ class CustomFieldValue {
 
   factory CustomFieldValue.fromJson(Map<String, dynamic> json) {
     final raw = json['value'];
+    // Values arrive as strings for most formats, but numeric, bool, and
+    // similar formats may serialize natively; anything non-null displays.
     final values = switch (raw) {
-      final String value when value.isNotEmpty => [value],
-      final List<dynamic> list => list.whereType<String>().toList(),
-      _ => const <String>[],
+      final List<dynamic> list => [
+        for (final item in list)
+          if (_displayString(item) case final String value) value,
+      ],
+      _ => [if (_displayString(raw) case final String value) value],
     };
     return CustomFieldValue(
       id: (json['id'] as num?)?.toInt() ?? 0,
@@ -272,6 +276,17 @@ class IssueDocument {
 
 NamedRef? _ref(Object? raw) =>
     raw is Map<String, dynamic> ? NamedRef.fromJson(raw) : null;
+
+/// A scalar rendered for display: strings pass through, numbers and bools
+/// stringify, everything else (null, nested structures) becomes null.
+String? _displayString(Object? raw) {
+  return switch (raw) {
+    final String value when value.isNotEmpty => value,
+    final num value => '$value',
+    final bool value => '$value',
+    _ => null,
+  };
+}
 
 DateTime? _dateTime(Object? raw) =>
     raw is String ? DateTime.tryParse(raw) : null;

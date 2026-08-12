@@ -142,6 +142,46 @@ void main() {
       expect(photo.thumbnailUrl, isNotNull);
     });
 
+    test('stringifies non-string journal and custom field values', () {
+      final issue = IssueDocument.fromJson({
+        '@id': 'https://example.org/issues/2',
+        'identifier': 2,
+        'subject': 'Numeric values',
+        'status': {'id': 1, 'name': 'New'},
+        'tracker': {'id': 1, 'name': 'Bug'},
+        'project': {'id': 1, 'identifier': 'p', 'name': 'P'},
+        'journals': [
+          {
+            'id': 1,
+            'private_notes': false,
+            'details': [
+              {
+                'property': 'attr',
+                'name': 'done_ratio',
+                'old_value': 0,
+                'new_value': 20,
+              },
+            ],
+          },
+        ],
+        'custom_fields': [
+          {'id': 1, 'name': 'Count', 'value': 42},
+          {
+            'id': 2,
+            'name': 'Flags',
+            'value': [true, 'x', 3],
+          },
+        ],
+        'editable': {'fields': <Object>[]},
+      });
+
+      final change = issue.journals.single.details.single;
+      expect(change.oldValue, '0');
+      expect(change.newValue, '20');
+      expect(issue.customFields.first.values, ['42']);
+      expect(issue.customFields.last.values, ['true', 'x', '3']);
+    });
+
     test('treats absent keys as unset, not as errors', () {
       final issue = IssueDocument.fromJson({
         '@id': 'https://example.org/issues/1',
