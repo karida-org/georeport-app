@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "org.georeport"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_secure_storage 11 needs a newer compile SDK and minSdk than
+    // Flutter's defaults.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -19,7 +21,7 @@ android {
         applicationId = "org.georeport"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
