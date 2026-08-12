@@ -1,13 +1,35 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../api/models/bundle.dart';
 import '../../api/models/changes_page.dart';
+import '../../connections/connection_manager.dart';
 import '../../net/connectivity.dart';
 import 'issue_providers.dart';
+import 'issues_cache.dart';
 import 'sync_status.dart';
+
+/// The on-disk cache for the active connection's issues; null while nothing
+/// is connected. One file per connection, so switching instances never
+/// shows another instance's data.
+final issuesCacheProvider = FutureProvider.autoDispose<IssuesCache?>((
+  ref,
+) async {
+  final connectionId = ref.watch(
+    connectionManagerProvider.select(
+      (state) => state.value?.active?.connection.id,
+    ),
+  );
+  if (connectionId == null) {
+    return null;
+  }
+  final documents = await getApplicationDocumentsDirectory();
+  return IssuesCache(File('${documents.path}/issues-$connectionId.json'));
+});
 
 /// The issues held in memory for the active connection, keyed by id, plus
 /// the change-feed cursor that keeps them fresh. Pure data: applying a feed
@@ -90,6 +112,23 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
       }
     });
     final client = ref.watch(activeClientProvider);
+    final cache = await ref.watch(issuesCacheProvider.future);
+
+    // Cache first: a restart — online or offline — starts from the last
+    // known state, and the change feed catches up from its cursor (one
+    // small request) instead of a full bundle reload.
+    final cached = await cache?.load();
+    if (cached != null) {
+      final syncedAt = cached.syncedAt;
+      if (syncedAt != null) {
+        _restoreSyncTime(syncedAt);
+      }
+      // Catch up through the feed as soon as this build completes; the
+      // poll's own guards handle offline and backgrounded states.
+      unawaited(Future.microtask(_autoRefresh));
+      return cached.state;
+    }
+
     // The cursor is taken before the bundle loads: the feed is at-least-once
     // and applied idempotently, so overlap is safe while a gap would not be.
     final cursor = DateTime.now().toUtc().toIso8601String();
@@ -102,11 +141,13 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
       rethrow;
     }
     _recordSync(healthy: true);
-    return IssuesState(
+    final fresh = IssuesState(
       byId: {for (final issue in bundle.issues) issue.summary.id: issue},
       projects: bundle.projects,
       cursor: cursor,
     );
+    await _persist(fresh);
+    return fresh;
   }
 
   /// Incremental refresh through the change feed. Throws on failure so a
@@ -140,10 +181,37 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
       }
       state = AsyncData(next);
       _recordSync(healthy: true);
+      await _persist(next);
     } on Exception {
       _recordSync(healthy: false);
       rethrow;
     }
+  }
+
+  /// Best effort: a failed cache write must never take down a successful
+  /// sync (the next one retries anyway).
+  Future<void> _persist(IssuesState state) async {
+    try {
+      final cache = await ref.read(issuesCacheProvider.future);
+      await cache?.save(state, syncedAt: DateTime.now());
+    } on Exception catch (error) {
+      debugPrint('Issues cache write failed (ignored): $error');
+    }
+  }
+
+  /// Data served from disk shows how old it is: the cached last-sync time
+  /// lands in the menu until a live sync updates it.
+  void _restoreSyncTime(DateTime syncedAt) {
+    Future.microtask(() {
+      if (!ref.mounted) {
+        return;
+      }
+      final status = ref.read(syncStatusProvider);
+      // Never move an already-live status backwards.
+      if (status.lastSyncAt == null || status.lastSyncAt!.isBefore(syncedAt)) {
+        ref.read(syncStatusProvider.notifier).recordSuccess(syncedAt);
+      }
+    });
   }
 
   /// The periodic poll: quiet by design — the shown data stays on failure,
