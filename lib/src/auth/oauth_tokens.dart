@@ -14,7 +14,7 @@ class OAuthTokens {
       refreshToken: json['refresh_token'] as String?,
       expiresAt: expiresIn == null
           ? null
-          : DateTime.now().add(Duration(seconds: expiresIn)),
+          : DateTime.now().toUtc().add(Duration(seconds: expiresIn)),
     );
   }
 
@@ -35,7 +35,8 @@ class OAuthTokens {
   /// a stale token is then caught by the 401-refresh-retry path.
   bool isExpiring({Duration leeway = const Duration(seconds: 30)}) {
     final expiresAt = this.expiresAt;
-    return expiresAt != null && DateTime.now().add(leeway).isAfter(expiresAt);
+    return expiresAt != null &&
+        DateTime.now().toUtc().add(leeway).isAfter(expiresAt);
   }
 
   Map<String, dynamic> toJson() => {

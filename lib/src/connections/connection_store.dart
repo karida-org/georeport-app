@@ -46,7 +46,13 @@ class ConnectionStore {
     if (raw == null || raw.isEmpty) {
       return const [];
     }
-    final decoded = json.decode(raw);
+    final Object? decoded;
+    try {
+      decoded = json.decode(raw);
+    } on FormatException {
+      // Corrupt storage must never block startup; the user can re-add.
+      return const [];
+    }
     if (decoded is! List) {
       return const [];
     }
@@ -77,7 +83,12 @@ class ConnectionStore {
     if (raw == null || raw.isEmpty) {
       return null;
     }
-    final decoded = json.decode(raw);
+    final Object? decoded;
+    try {
+      decoded = json.decode(raw);
+    } on FormatException {
+      return null;
+    }
     return decoded is Map<String, dynamic> ? decoded : null;
   }
 

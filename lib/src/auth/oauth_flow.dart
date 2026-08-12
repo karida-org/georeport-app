@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:app_links/app_links.dart';
@@ -37,8 +38,11 @@ class OAuthFlow {
   }) async {
     final pkce = PkcePair.generate();
     final state = _randomState();
-    final authorizeUri = Uri.parse(config.authorizeUrl).replace(
+    final baseAuthorizeUri = Uri.parse(config.authorizeUrl);
+    final authorizeUri = baseAuthorizeUri.replace(
       queryParameters: {
+        // Anything already carried by the advertised URL stays.
+        ...baseAuthorizeUri.queryParameters,
         'response_type': 'code',
         'client_id': config.clientId,
         'redirect_uri': config.redirectUri,
@@ -49,23 +53,37 @@ class OAuthFlow {
       },
     );
 
-    // Subscribe before launching so a fast redirect cannot be missed.
-    final redirect = _appLinks.uriLinkStream
-        .firstWhere((uri) => uri.scheme == georeportScheme)
-        .timeout(
-          timeout,
-          onTimeout: () => throw const OAuthFlowException('Sign-in timed out.'),
-        );
+    // Subscribe before launching so a fast redirect cannot be missed, and
+    // always cancel the subscription: a timeout or a failed exchange must
+    // not leave a listener that swallows a later attempt's callback.
+    final expected = Uri.parse(config.redirectUri);
+    final completer = Completer<Uri>();
+    final subscription = _appLinks.uriLinkStream.listen((uri) {
+      final matches =
+          uri.scheme == expected.scheme &&
+          uri.host == expected.host &&
+          uri.path == expected.path;
+      if (matches && !completer.isCompleted) {
+        completer.complete(uri);
+      }
+    });
 
-    final launched = await launchUrl(
-      authorizeUri,
-      mode: LaunchMode.externalApplication,
-    );
-    if (!launched) {
-      throw const OAuthFlowException('Could not open the sign-in page.');
+    final Uri callback;
+    try {
+      final launched = await launchUrl(
+        authorizeUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        throw const OAuthFlowException('Could not open the sign-in page.');
+      }
+      callback = await completer.future.timeout(
+        timeout,
+        onTimeout: () => throw const OAuthFlowException('Sign-in timed out.'),
+      );
+    } finally {
+      await subscription.cancel();
     }
-
-    final callback = await redirect;
     final params = callback.queryParameters;
     if (params['error'] != null) {
       throw OAuthFlowException(params['error_description'] ?? params['error']!);
@@ -86,7 +104,7 @@ class OAuthFlow {
     required String code,
     required String verifier,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
+    final response = await _dio.post<dynamic>(
       config.tokenUrl,
       data: {
         'grant_type': 'authorization_code',
@@ -97,11 +115,7 @@ class OAuthFlow {
       },
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );
-    final tokens = OAuthTokens.fromTokenResponse(response.data ?? const {});
-    if (tokens.accessToken.isEmpty) {
-      throw const OAuthFlowException('The server returned no access token.');
-    }
-    return tokens;
+    return tokensFromResponseBody(response.data);
   }
 
   String _randomState() {
@@ -118,7 +132,7 @@ Future<OAuthTokens> refreshTokens({
   required String clientId,
   required String refreshToken,
 }) async {
-  final response = await dio.post<Map<String, dynamic>>(
+  final response = await dio.post<dynamic>(
     tokenUrl,
     data: {
       'grant_type': 'refresh_token',
@@ -127,9 +141,21 @@ Future<OAuthTokens> refreshTokens({
     },
     options: Options(contentType: Headers.formUrlEncodedContentType),
   );
-  final tokens = OAuthTokens.fromTokenResponse(response.data ?? const {});
+  return tokensFromResponseBody(response.data);
+}
+
+/// The token endpoint's body as tokens, tolerating a non-map body (wrong
+/// content type, HTML error page) by failing with a typed exception instead
+/// of a TypeError that would bypass Exception-based handling.
+OAuthTokens tokensFromResponseBody(Object? body) {
+  if (body is! Map<String, dynamic>) {
+    throw const OAuthFlowException(
+      'The server returned an unexpected token response.',
+    );
+  }
+  final tokens = OAuthTokens.fromTokenResponse(body);
   if (tokens.accessToken.isEmpty) {
-    throw const OAuthFlowException('Token refresh returned no access token.');
+    throw const OAuthFlowException('The server returned no access token.');
   }
   return tokens;
 }

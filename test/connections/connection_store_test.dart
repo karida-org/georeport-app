@@ -49,5 +49,11 @@ void main() {
   test('tolerates corrupt stored payloads', () async {
     secrets.values['georeport.connections'] = '{"not": "a list"}';
     expect(await store.loadConnections(), isEmpty);
+
+    secrets.values['georeport.connections'] = '{';
+    expect(await store.loadConnections(), isEmpty);
+
+    secrets.values['georeport.secret.1'] = '{';
+    expect(await store.readSecret('1'), isNull);
   });
 }

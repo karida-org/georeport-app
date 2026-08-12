@@ -1,3 +1,4 @@
+import '../api/base_url.dart';
 import '../api/models/capabilities.dart';
 
 /// The URL scheme this app registers on both platforms; only redirect URIs
@@ -40,7 +41,7 @@ OAuthConfig? oauthConfigFor(String baseUrl, Capabilities capabilities) {
     return null;
   }
 
-  final base = Uri.parse(baseUrl);
+  final base = Uri.parse(normalizeBaseUrl(baseUrl));
   final redirectUri = mobile.redirectUris.firstWhere(
     (uri) => Uri.tryParse(uri)?.scheme == georeportScheme,
     orElse: () => _fallbackRedirectUri,

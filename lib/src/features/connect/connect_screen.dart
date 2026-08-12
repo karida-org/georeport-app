@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
+import '../../api/base_url.dart';
 import '../../api/models/capabilities.dart';
 import '../../auth/oauth_config.dart';
 import '../../connections/connection_manager.dart';
@@ -40,7 +41,11 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     });
     try {
       await action();
-    } on Exception catch (error) {
+      // Catch everything: a malformed probe response surfaces as a TypeError
+      // (an Error, not an Exception), and a silent no-op would strand the
+      // user on an idle-looking screen.
+      // ignore: avoid_catches_without_on_clauses
+    } catch (error) {
       if (mounted) {
         setState(() => _error = '$error');
       }
@@ -54,22 +59,25 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   Future<void> _probe() => _run(() async {
     final capabilities = await ref
         .read(connectionManagerProvider.notifier)
-        .probe(_urlController.text);
+        .probe(normalizeBaseUrl(_urlController.text));
     setState(() => _probed = capabilities);
   });
 
   Future<void> _signInWithOAuth() => _run(() async {
     await ref
         .read(connectionManagerProvider.notifier)
-        .connectWithOAuth(baseUrl: _urlController.text, capabilities: _probed!);
+        .connectWithOAuth(
+          baseUrl: normalizeBaseUrl(_urlController.text),
+          capabilities: _probed!,
+        );
   });
 
   Future<void> _connectWithApiKey() => _run(() async {
     await ref
         .read(connectionManagerProvider.notifier)
         .connectWithApiKey(
-          baseUrl: _urlController.text,
-          apiKey: _apiKeyController.text,
+          baseUrl: normalizeBaseUrl(_urlController.text),
+          apiKey: _apiKeyController.text.trim(),
         );
   });
 
@@ -143,7 +151,8 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   Widget _buildInstanceForm(AppLocalizations l10n) {
     final probed = _probed;
     final oauthAvailable =
-        probed != null && oauthConfigFor(_urlController.text, probed) != null;
+        probed != null &&
+        oauthConfigFor(normalizeBaseUrl(_urlController.text), probed) != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -180,7 +189,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.dns),
-              title: Text(Uri.parse(_urlController.text.trim()).host),
+              title: Text(
+                Uri.parse(normalizeBaseUrl(_urlController.text)).host,
+              ),
               subtitle: Text(l10n.connectServerSummary(probed.redmineVersion)),
             ),
           ),

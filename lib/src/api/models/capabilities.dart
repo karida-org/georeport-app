@@ -46,8 +46,8 @@ class OAuthInfo {
   });
 
   factory OAuthInfo.fromJson(Map<String, dynamic> json) {
-    final clients = json['clients'] as Map<String, dynamic>?;
-    final mobile = clients?['mobile'];
+    final clients = json['clients'];
+    final mobile = clients is Map<String, dynamic> ? clients['mobile'] : null;
     return OAuthInfo(
       authorizeUrl: json['authorize_url'] as String? ?? '',
       tokenUrl: json['token_url'] as String? ?? '',

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api/base_url.dart';
 import '../api/client_auth.dart';
 import '../api/gtt_sync_client.dart';
 import '../api/models/capabilities.dart';
@@ -80,9 +81,13 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     required String baseUrl,
     required String apiKey,
   }) async {
-    final client = GttSyncClient(baseUrl: baseUrl, auth: ApiKeyAuth(apiKey));
+    final normalized = normalizeBaseUrl(baseUrl);
+    final client = GttSyncClient(baseUrl: normalized, auth: ApiKeyAuth(apiKey));
     final capabilities = await client.capabilities();
-    final connection = _newConnection(baseUrl, ConnectionAuthKind.apiKey);
+    // The probe is public, so it succeeds with any key; verify the key on an
+    // authenticated call before anything is persisted.
+    await client.validateAuth();
+    final connection = _newConnection(normalized, ConnectionAuthKind.apiKey);
     await _store.writeSecret(connection.id, {
       'kind': 'api_key',
       'api_key': apiKey,
@@ -103,14 +108,15 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     required String baseUrl,
     required Capabilities capabilities,
   }) async {
-    final config = oauthConfigFor(baseUrl, capabilities);
+    final normalized = normalizeBaseUrl(baseUrl);
+    final config = oauthConfigFor(normalized, capabilities);
     if (config == null) {
       throw const OAuthFlowException(
         'This instance does not offer app sign-in.',
       );
     }
     final tokens = await ref.read(oauthFlowProvider).authorize(config);
-    final connection = _newConnection(baseUrl, ConnectionAuthKind.oauth);
+    final connection = _newConnection(normalized, ConnectionAuthKind.oauth);
     await _persistOAuthSecret(connection.id, config, tokens);
     final client = _oauthClient(connection, config, tokens);
     await _commit(
@@ -161,12 +167,12 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     state = AsyncData(ConnectionsState(connections: remaining, active: active));
   }
 
-  void disconnect() {
+  Future<void> disconnect() async {
     final current = state.value;
     if (current == null) {
       return;
     }
-    _store.saveActiveId(null);
+    await _store.saveActiveId(null);
     state = AsyncData(ConnectionsState(connections: current.connections));
   }
 
@@ -269,7 +275,14 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
         return;
       }
       final revokeUrl = tokenUrl.replaceFirst(RegExp(r'/token$'), '/revoke');
-      await Dio().post<void>(
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+        ),
+      );
+      await dio.post<void>(
         revokeUrl,
         data: {
           'token': tokens.accessToken,
