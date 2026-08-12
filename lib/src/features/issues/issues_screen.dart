@@ -35,7 +35,10 @@ class MyWorkFilterNotifier extends Notifier<MyWorkFilter> {
 }
 
 class IssuesScreen extends ConsumerWidget {
-  const IssuesScreen({super.key});
+  const IssuesScreen({this.initialTab = 0, super.key});
+
+  /// 0 = list, 1 = map; the dashboard's Map tile lands directly on the map.
+  final int initialTab;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,6 +47,7 @@ class IssuesScreen extends ConsumerWidget {
 
     return DefaultTabController(
       length: 2,
+      initialIndex: initialTab,
       child: Scaffold(
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => context.push('/capture'),

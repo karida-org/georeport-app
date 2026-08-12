@@ -295,7 +295,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           messenger.showSnackBar(
             SnackBar(content: Text(l10n.captureQueuedOffline)),
           );
-          context.go('/issues');
+          context.go('/home');
         }
       }
     } on StateError {

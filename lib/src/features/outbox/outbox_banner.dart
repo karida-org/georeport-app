@@ -10,7 +10,14 @@ import '../../capture/queue/upload_queue.dart';
 /// count, worst state, and a tap-through to the outbox itself. Renders
 /// nothing when the queue is empty, which is the normal case.
 class OutboxBanner extends ConsumerWidget {
-  const OutboxBanner({super.key});
+  const OutboxBanner({
+    this.padding = const EdgeInsets.fromLTRB(16, 8, 16, 0),
+    super.key,
+  });
+
+  /// Outer spacing; hosts embedding the banner in an already-padded list
+  /// pass their own.
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,7 +34,7 @@ class OutboxBanner extends ConsumerWidget {
         ? scheme.onErrorContainer
         : scheme.onSecondaryContainer;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: padding,
       child: Card(
         color: failed > 0 ? scheme.errorContainer : scheme.secondaryContainer,
         child: ListTile(
