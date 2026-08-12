@@ -250,5 +250,14 @@
   "locationSharingExplainer": "現在地を送信し、近くにいる担当者に作業を割り当てられるようにします。保存されるのは最新の位置のみで、前の位置は上書きされます。閲覧できるのはチームの位置情報を見る権限がある人だけです。",
   "locationSharingForegroundNote": "アプリを開いている間だけ共有されます。いつでもオフにできます。",
   "locationSharingNotYetShared": "まだ共有していません。",
-  "locationSharingLastShared": "最終共有 {time}"
+  "locationSharingLastShared": "最終共有 {time}",
+  "captureStepPhotos": "写真",
+  "captureStepLocation": "場所",
+  "captureStepProject": "プロジェクトと種別",
+  "captureStepDetails": "詳細",
+  "captureStepReview": "確認",
+  "captureStepCounter": "ステップ {current}/{total}",
+  "captureStepNext": "次へ",
+  "captureStepBack": "戻る",
+  "captureStepPhotosHint": "写真は状況の記録になります。写真なしで進むこともできます。"
 }

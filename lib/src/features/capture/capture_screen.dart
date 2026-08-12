@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
+import '../../api/models/bundle.dart';
 import '../../api/models/project_schema.dart';
 import '../../capture/device_location.dart';
 import '../../capture/exif_location.dart';
@@ -18,11 +19,12 @@ import '../../media/mime.dart';
 import '../issues/issues_store.dart';
 import 'capture_defaults.dart';
 import 'capture_providers.dart';
+import 'capture_steps.dart';
+import 'capture_widgets.dart';
 import 'custom_field_editor.dart';
 import 'location_picker_screen.dart';
 
 /// Where a draft location came from, shown as context under the coordinates.
-enum _LocationSource { manual, exif, device }
 
 /// The capture flow: photos first, then a minimal schema-driven form.
 /// Required fields surface automatically; everything optional folds away.
@@ -46,10 +48,11 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   int? _projectId;
   int? _trackerId;
   LatLng? _location;
-  _LocationSource _locationSource = _LocationSource.manual;
+  CaptureLocationSource _locationSource = CaptureLocationSource.manual;
   bool _locating = false;
   bool _showOptionalFields = false;
   final Map<int, Object> _customFieldValues = {};
+  CaptureStep _step = CaptureStep.photos;
   bool _submitting = false;
   String? _error;
 
@@ -137,7 +140,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         if (suggested != null && mounted) {
           setState(() {
             _location = suggested;
-            _locationSource = _LocationSource.exif;
+            _locationSource = CaptureLocationSource.exif;
           });
         }
       }
@@ -147,7 +150,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       if (fallback != null && mounted && _location == null) {
         setState(() {
           _location = fallback;
-          _locationSource = _LocationSource.device;
+          _locationSource = CaptureLocationSource.device;
         });
       }
     }
@@ -165,7 +168,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       _locating = false;
       if (position != null) {
         _location = position;
-        _locationSource = _LocationSource.device;
+        _locationSource = CaptureLocationSource.device;
       }
     });
     if (position == null) {
@@ -185,7 +188,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     if (picked != null && mounted) {
       setState(() {
         _location = picked;
-        _locationSource = _LocationSource.manual;
+        _locationSource = CaptureLocationSource.manual;
       });
     }
   }
@@ -327,109 +330,254 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
             ? remembered
             : (projects.isNotEmpty ? projects.first.id : null));
 
+    if (projectId == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.captureTitle)),
+        body: Center(child: Text(l10n.captureNoProjects)),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.captureTitle)),
-      body: projectId == null
-          ? Center(child: Text(l10n.captureNoProjects))
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _PhotoStrip(
-                  photos: _photos,
-                  onCamera: _submitting
-                      ? null
-                      : () => _addPhoto(ImageSource.camera),
-                  onGallery: _submitting
-                      ? null
-                      : () => _addPhoto(ImageSource.gallery),
-                  onRemove: _submitting
-                      ? null
-                      : (index) => setState(() => _photos.removeAt(index)),
-                ),
-                const SizedBox(height: 16),
-                _LocationCard(
-                  location: _location,
-                  source: _locationSource,
-                  locating: _locating,
-                  onEdit: _submitting ? null : _editLocation,
-                  onUseCurrent: _location != null || _submitting || _locating
-                      ? null
-                      : _useCurrentLocation,
-                  onClear: _location == null || _submitting
-                      ? null
-                      : () => setState(() {
-                          _location = null;
-                          _locationSource = _LocationSource.manual;
-                        }),
-                ),
-                const SizedBox(height: 16),
-                if (projects.length > 1) ...[
-                  DropdownButtonFormField<int>(
-                    initialValue: projectId,
-                    decoration: InputDecoration(
-                      labelText: l10n.issueProjectLabel,
-                      border: const OutlineInputBorder(),
-                    ),
-                    items: [
-                      for (final project in projects)
-                        DropdownMenuItem(
-                          value: project.id,
-                          child: Text(project.name),
-                        ),
-                    ],
-                    onChanged: _submitting
-                        ? null
-                        : (value) => setState(() {
-                            _projectId = value;
-                            _trackerId = null;
-                            _customFieldValues.clear();
-                          }),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                ref
-                    .watch(projectSchemaProvider(projectId))
-                    .when(
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      error: (error, _) =>
-                          Text(l10n.issuesLoadFailed('$error')),
-                      data: (schema) => _buildForm(l10n, schema, projectId),
-                    ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _error!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+      body: Column(
+        children: [
+          CaptureStepHeader(step: _step),
+          Expanded(
+            child: ref
+                .watch(projectSchemaProvider(projectId))
+                .when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, _) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(l10n.issuesLoadFailed('$error')),
                     ),
                   ),
-                ],
-              ],
+                  data: (schema) =>
+                      _buildStep(l10n, schema, projectId, projects),
+                ),
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
+          ref
+              .watch(projectSchemaProvider(projectId))
+              .maybeWhen(
+                data: (schema) => _controls(l10n, schema, projectId),
+                orElse: () => const SizedBox.shrink(),
+              ),
+        ],
+      ),
     );
   }
 
-  Widget _buildForm(
-    AppLocalizations l10n,
-    ProjectSchema schema,
-    int projectId,
-  ) {
-    // Same derivation as the project: explicit choice, then the tracker
-    // last used in this project, then the schema's first tracker.
+  /// The tracker in effect: explicit choice, then the one last used in this
+  /// project, then the schema's first.
+  int? _effectiveTrackerId(ProjectSchema schema, int projectId) {
     final remembered = ref.watch(lastTrackerProvider(projectId)).value;
-    final trackerId =
-        _trackerId ??
+    return _trackerId ??
         (schema.trackers.any((tracker) => tracker.id == remembered)
             ? remembered
             : (schema.trackers.isNotEmpty ? schema.trackers.first.id : null));
-    if (trackerId == null) {
-      return Text(l10n.captureNoTrackers);
-    }
+  }
+
+  Widget _buildStep(
+    AppLocalizations l10n,
+    ProjectSchema schema,
+    int projectId,
+    List<BundleProject> projects,
+  ) {
+    final trackerId = _effectiveTrackerId(schema, projectId);
+    final body = switch (_step) {
+      CaptureStep.photos => _photosStep(l10n),
+      CaptureStep.location => _locationStep(),
+      CaptureStep.project => _projectStep(l10n, schema, projects, projectId),
+      CaptureStep.details =>
+        trackerId == null
+            ? Text(l10n.captureNoTrackers)
+            : _detailsStep(l10n, schema, trackerId),
+      CaptureStep.review => _reviewStep(l10n, schema, projects, projectId),
+    };
+    return ListView(padding: const EdgeInsets.all(16), children: [body]);
+  }
+
+  Widget _photosStep(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(l10n.captureStepPhotosHint),
+        const SizedBox(height: 16),
+        CapturePhotoStrip(
+          photos: _photos,
+          onCamera: _submitting ? null : () => _addPhoto(ImageSource.camera),
+          onGallery: _submitting ? null : () => _addPhoto(ImageSource.gallery),
+          onRemove: _submitting
+              ? null
+              : (index) => setState(() => _photos.removeAt(index)),
+        ),
+      ],
+    );
+  }
+
+  Widget _locationStep() {
+    return CaptureLocationCard(
+      location: _location,
+      source: _locationSource,
+      locating: _locating,
+      onEdit: _submitting ? null : _editLocation,
+      onUseCurrent: _location != null || _submitting || _locating
+          ? null
+          : _useCurrentLocation,
+      onClear: _location == null || _submitting
+          ? null
+          : () => setState(() {
+              _location = null;
+              _locationSource = CaptureLocationSource.manual;
+            }),
+    );
+  }
+
+  Widget _projectStep(
+    AppLocalizations l10n,
+    ProjectSchema schema,
+    List<BundleProject> projects,
+    int projectId,
+  ) {
+    final trackerId = _effectiveTrackerId(schema, projectId);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DropdownButtonFormField<int>(
+          initialValue: projectId,
+          decoration: InputDecoration(
+            labelText: l10n.issueProjectLabel,
+            border: const OutlineInputBorder(),
+          ),
+          items: [
+            for (final project in projects)
+              DropdownMenuItem(value: project.id, child: Text(project.name)),
+          ],
+          onChanged: _submitting
+              ? null
+              : (value) => setState(() {
+                  _projectId = value;
+                  _trackerId = null;
+                  _customFieldValues.clear();
+                }),
+        ),
+        const SizedBox(height: 16),
+        if (schema.trackers.isEmpty)
+          Text(l10n.captureNoTrackers)
+        else
+          DropdownButtonFormField<int>(
+            initialValue: trackerId,
+            decoration: InputDecoration(
+              labelText: l10n.captureTrackerLabel,
+              border: const OutlineInputBorder(),
+            ),
+            items: [
+              for (final tracker in schema.trackers)
+                DropdownMenuItem(value: tracker.id, child: Text(tracker.name)),
+            ],
+            onChanged: _submitting
+                ? null
+                : (value) => setState(() {
+                    _trackerId = value;
+                    _customFieldValues.clear();
+                  }),
+          ),
+      ],
+    );
+  }
+
+  Widget _reviewStep(
+    AppLocalizations l10n,
+    ProjectSchema schema,
+    List<BundleProject> projects,
+    int projectId,
+  ) {
+    final trackerId = _effectiveTrackerId(schema, projectId);
+    final project = projects
+        .where((candidate) => candidate.id == projectId)
+        .map((candidate) => candidate.name)
+        .firstOrNull;
+    final tracker = schema.trackers
+        .where((candidate) => candidate.id == trackerId)
+        .map((candidate) => candidate.name)
+        .firstOrNull;
+    final subject = _subjectController.text.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_photos.isNotEmpty) ...[
+          CapturePhotoStrip(photos: _photos),
+          const SizedBox(height: 16),
+        ],
+        _ReviewRow(
+          label: l10n.captureSubjectLabel,
+          value: subject.isEmpty ? l10n.captureSubjectRequired : subject,
+        ),
+        if (project != null)
+          _ReviewRow(label: l10n.issueProjectLabel, value: project),
+        if (tracker != null)
+          _ReviewRow(label: l10n.captureTrackerLabel, value: tracker),
+        _ReviewRow(
+          label: l10n.captureStepLocation,
+          value: _location == null
+              ? l10n.captureNoLocation
+              : '${_location!.latitude.toStringAsFixed(5)}, '
+                    '${_location!.longitude.toStringAsFixed(5)}',
+        ),
+        if (_descriptionController.text.trim().isNotEmpty)
+          _ReviewRow(
+            label: l10n.captureDescriptionLabel,
+            value: _descriptionController.text.trim(),
+          ),
+      ],
+    );
+  }
+
+  /// Forward moves a step, or submits on the last one. Nothing blocks
+  /// moving on: a step with nothing in it is a legitimate answer (no photo,
+  /// no location), and the real validation still runs at submit.
+  Widget _controls(AppLocalizations l10n, ProjectSchema schema, int projectId) {
+    final isLast = _step == CaptureStep.review;
+    return CaptureStepControls(
+      busy: _submitting,
+      onBack: _step == CaptureStep.photos
+          ? null
+          : () => setState(() {
+              _error = null;
+              _step = CaptureStep.values[CaptureStep.values.indexOf(_step) - 1];
+            }),
+      nextLabel: isLast ? l10n.captureSubmitButton : l10n.captureStepNext,
+      onNext: () {
+        if (!isLast) {
+          setState(() {
+            _error = null;
+            _step = CaptureStep.values[CaptureStep.values.indexOf(_step) + 1];
+          });
+          return;
+        }
+        final trackerId = _effectiveTrackerId(schema, projectId);
+        if (trackerId != null) {
+          _submit(schema, projectId, trackerId);
+        }
+      },
+    );
+  }
+
+  Widget _detailsStep(
+    AppLocalizations l10n,
+    ProjectSchema schema,
+    int trackerId,
+  ) {
     final fields = schema
         .fieldsForTracker(trackerId)
         .where(
@@ -441,24 +589,6 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DropdownButtonFormField<int>(
-          initialValue: trackerId,
-          decoration: InputDecoration(
-            labelText: l10n.captureTrackerLabel,
-            border: const OutlineInputBorder(),
-          ),
-          items: [
-            for (final tracker in schema.trackers)
-              DropdownMenuItem(value: tracker.id, child: Text(tracker.name)),
-          ],
-          onChanged: _submitting
-              ? null
-              : (value) => setState(() {
-                  _trackerId = value;
-                  _customFieldValues.clear();
-                }),
-        ),
-        const SizedBox(height: 16),
         TextField(
           controller: _subjectController,
           enabled: !_submitting,
@@ -517,182 +647,34 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
               ),
             ],
         ],
-        const SizedBox(height: 24),
-        FilledButton(
-          onPressed: _submitting
-              ? null
-              : () => _submit(schema, projectId, trackerId),
-          child: _submitting
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(l10n.captureSubmitButton),
-        ),
-        const SizedBox(height: 24),
       ],
     );
   }
 }
 
-class _PhotoStrip extends StatelessWidget {
-  const _PhotoStrip({
-    required this.photos,
-    required this.onCamera,
-    required this.onGallery,
-    required this.onRemove,
-  });
+/// One labelled line of the review summary.
+class _ReviewRow extends StatelessWidget {
+  const _ReviewRow({required this.label, required this.value});
 
-  final List<DraftPhoto> photos;
-  final VoidCallback? onCamera;
-  final VoidCallback? onGallery;
-  final ValueChanged<int>? onRemove;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (photos.isNotEmpty) ...[
-          SizedBox(
-            height: 96,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: photos.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 8),
-              itemBuilder: (context, index) => Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
-                      photos[index].bytes,
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
-                      // Thumbnails never need native resolution.
-                      cacheWidth: 192,
-                    ),
-                  ),
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.cancel, size: 20),
-                      tooltip: l10n.capturePhotoRemove(index + 1),
-                      color: Colors.white,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.black38,
-                        minimumSize: const Size(28, 28),
-                        padding: EdgeInsets.zero,
-                      ),
-                      onPressed: onRemove == null
-                          ? null
-                          : () => onRemove!(index),
-                    ),
-                  ),
-                ],
-              ),
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 8),
+          Text(value, style: theme.textTheme.bodyLarge),
         ],
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: onCamera,
-                icon: const Icon(Icons.photo_camera),
-                label: Text(l10n.capturePhotoCamera),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: onGallery,
-                icon: const Icon(Icons.photo_library),
-                label: Text(l10n.capturePhotoGallery),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _LocationCard extends StatelessWidget {
-  const _LocationCard({
-    required this.location,
-    required this.source,
-    required this.locating,
-    required this.onEdit,
-    required this.onUseCurrent,
-    required this.onClear,
-  });
-
-  final LatLng? location;
-  final _LocationSource source;
-  final bool locating;
-  final VoidCallback? onEdit;
-  final VoidCallback? onUseCurrent;
-  final VoidCallback? onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final location = this.location;
-    final subtitle = switch ((location, source)) {
-      (null, _) => Text(l10n.captureNoLocationHint),
-      (_, _LocationSource.exif) => Text(l10n.captureLocationFromPhoto),
-      (_, _LocationSource.device) => Text(l10n.captureLocationFromDevice),
-      _ => null,
-    };
-    return Card(
-      child: ListTile(
-        leading: Icon(
-          location == null ? Icons.location_off : Icons.place,
-          color: location == null
-              ? Theme.of(context).colorScheme.outline
-              : Theme.of(context).colorScheme.primary,
-        ),
-        title: Text(
-          location == null
-              ? l10n.captureNoLocation
-              : '${location.latitude.toStringAsFixed(5)}, '
-                    '${location.longitude.toStringAsFixed(5)}',
-        ),
-        subtitle: subtitle,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (location == null)
-              IconButton(
-                icon: locating
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.my_location),
-                tooltip: l10n.captureUseCurrentLocation,
-                onPressed: onUseCurrent,
-              ),
-            if (onClear != null)
-              IconButton(
-                icon: const Icon(Icons.clear),
-                tooltip: l10n.captureClearLocation,
-                onPressed: onClear,
-              ),
-            IconButton(
-              icon: const Icon(Icons.edit_location_alt),
-              tooltip: l10n.captureEditLocation,
-              onPressed: onEdit,
-            ),
-          ],
-        ),
-        onTap: onEdit,
       ),
     );
   }
