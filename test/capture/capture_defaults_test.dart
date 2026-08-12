@@ -9,8 +9,7 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
   });
 
-  test('remembers the last project and the last tracker per project',
-      () async {
+  test('remembers the last project and the last tracker per project', () async {
     final defaults = CaptureDefaults();
     expect(await defaults.lastProject(), isNull);
     expect(await defaults.lastTracker(1), isNull);
