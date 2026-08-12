@@ -50,6 +50,7 @@
   "captureNoLocation": "位置情報なし",
   "captureNoLocationHint": "位置情報付きの写真を添付するか、地図で場所を選んでください。",
   "captureLocationFromPhoto": "写真から推定した位置です",
+  "captureLocationFromDevice": "現在地から推定した位置です",
   "captureEditLocation": "地図で選ぶ",
   "captureClearLocation": "位置情報を削除",
   "captureLocationTitle": "場所を選ぶ",

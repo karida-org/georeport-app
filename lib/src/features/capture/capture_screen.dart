@@ -6,10 +6,12 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/project_schema.dart';
+import '../../capture/device_location.dart';
 import '../../capture/exif_location.dart';
 import '../../capture/issue_draft.dart';
 import '../../connections/connection_manager.dart';
 import '../issues/issues_store.dart';
+import 'capture_defaults.dart';
 import 'capture_providers.dart';
 import 'custom_field_editor.dart';
 import 'location_picker_screen.dart';
@@ -24,6 +26,9 @@ const _mimeByExtension = {
   'heic': 'image/heic',
   'heif': 'image/heif',
 };
+
+/// Where a draft location came from, shown as context under the coordinates.
+enum _LocationSource { manual, exif, device }
 
 /// The capture flow: photos first, then a minimal schema-driven form.
 /// Required fields surface automatically; everything optional folds away.
@@ -43,7 +48,8 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   int? _projectId;
   int? _trackerId;
   LatLng? _location;
-  bool _locationFromExif = false;
+  _LocationSource _locationSource = _LocationSource.manual;
+  bool _locating = false;
   bool _showOptionalFields = false;
   final Map<int, Object> _customFieldValues = {};
   bool _submitting = false;
@@ -84,9 +90,21 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           if (suggested != null && mounted) {
             setState(() {
               _location = suggested;
-              _locationFromExif = true;
+              _locationSource = _LocationSource.exif;
             });
           }
+        }
+      }
+      // No EXIF position on any photo: fall back to where the user stands,
+      // but only when location permission is already granted; a permission
+      // dialog must never interrupt the photo flow uninvited.
+      if (images.isNotEmpty && _location == null && mounted) {
+        final fallback = await currentDeviceLocation();
+        if (fallback != null && mounted && _location == null) {
+          setState(() {
+            _location = fallback;
+            _locationSource = _LocationSource.device;
+          });
         }
       }
       // Camera unavailable, permission denied, unreadable file: platform
@@ -96,6 +114,28 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       if (mounted) {
         setState(() => _error = l10n.capturePhotoAddFailed('$error'));
       }
+    }
+  }
+
+  Future<void> _useCurrentLocation() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _locating = true);
+    final position = await currentDeviceLocation(requestPermission: true);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _locating = false;
+      if (position != null) {
+        _location = position;
+        _locationSource = _LocationSource.device;
+      }
+    });
+    if (position == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.captureLocationFailed)),
+      );
     }
   }
 
@@ -109,7 +149,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     if (picked != null && mounted) {
       setState(() {
         _location = picked;
-        _locationFromExif = false;
+        _locationSource = _LocationSource.manual;
       });
     }
   }
@@ -131,12 +171,24 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       return;
     }
     // A never-touched switch means "off", not "missing".
-    final values = {
+    final values = <int, Object>{
       for (final field in fields)
         if (field.fieldFormat == 'bool' && field.required)
           field.id: _customFieldValues[field.id] ?? '0',
-      ..._customFieldValues,
     };
+    // Trim text values so whitespace never masquerades as content: an
+    // all-blank entry drops out entirely and fails the required check.
+    for (final entry in _customFieldValues.entries) {
+      final value = entry.value;
+      if (value is String) {
+        final trimmed = value.trim();
+        if (trimmed.isNotEmpty) {
+          values[entry.key] = trimmed;
+        }
+      } else {
+        values[entry.key] = value;
+      }
+    }
     final missing = [
       for (final field in fields)
         if (field.required && values[field.id] == null) field.name,
@@ -149,7 +201,10 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       for (final field in fields)
         if ((field.fieldFormat == 'int' || field.fieldFormat == 'float') &&
             values[field.id] is String &&
-            num.tryParse(values[field.id]! as String) == null)
+            (field.fieldFormat == 'int'
+                    ? int.tryParse(values[field.id]! as String)
+                    : num.tryParse(values[field.id]! as String)) ==
+                null)
           field.name,
     ];
     if (notNumeric.isNotEmpty) {
@@ -170,9 +225,15 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         photos: List.of(_photos),
         customFieldValues: values,
       );
+      final defaults = ref.read(captureDefaultsProvider);
       final issueId = await ref.read(submitDraftProvider)(draft);
+      // Next capture starts from what was just used.
+      await defaults.remember(projectId: projectId, trackerId: trackerId);
       if (mounted) {
-        ref.invalidate(issuesProvider);
+        ref
+          ..invalidate(lastProjectProvider)
+          ..invalidate(lastTrackerProvider(projectId))
+          ..invalidate(issuesProvider);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l10n.captureCreated(issueId))));
@@ -204,9 +265,14 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     final issues = ref.watch(issuesProvider).value;
     final projects = issues?.projects ?? const [];
     // Effective selections: defaults are derived, never written during
-    // build; state only changes on explicit user action.
+    // build; state only changes on explicit user action. The last-used
+    // project wins over the list head once known.
+    final remembered = ref.watch(lastProjectProvider).value;
     final projectId =
-        _projectId ?? (projects.isNotEmpty ? projects.first.id : null);
+        _projectId ??
+        (projects.any((project) => project.id == remembered)
+            ? remembered
+            : (projects.isNotEmpty ? projects.first.id : null));
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.captureTitle)),
@@ -230,13 +296,17 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                 const SizedBox(height: 16),
                 _LocationCard(
                   location: _location,
-                  fromExif: _locationFromExif,
+                  source: _locationSource,
+                  locating: _locating,
                   onEdit: _submitting ? null : _editLocation,
+                  onUseCurrent: _location != null || _submitting || _locating
+                      ? null
+                      : _useCurrentLocation,
                   onClear: _location == null || _submitting
                       ? null
                       : () => setState(() {
                           _location = null;
-                          _locationFromExif = false;
+                          _locationSource = _LocationSource.manual;
                         }),
                 ),
                 const SizedBox(height: 16),
@@ -296,9 +366,14 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     ProjectSchema schema,
     int projectId,
   ) {
+    // Same derivation as the project: explicit choice, then the tracker
+    // last used in this project, then the schema's first tracker.
+    final remembered = ref.watch(lastTrackerProvider(projectId)).value;
     final trackerId =
         _trackerId ??
-        (schema.trackers.isNotEmpty ? schema.trackers.first.id : null);
+        (schema.trackers.any((tracker) => tracker.id == remembered)
+            ? remembered
+            : (schema.trackers.isNotEmpty ? schema.trackers.first.id : null));
     if (trackerId == null) {
       return Text(l10n.captureNoTrackers);
     }
@@ -497,20 +572,30 @@ class _PhotoStrip extends StatelessWidget {
 class _LocationCard extends StatelessWidget {
   const _LocationCard({
     required this.location,
-    required this.fromExif,
+    required this.source,
+    required this.locating,
     required this.onEdit,
+    required this.onUseCurrent,
     required this.onClear,
   });
 
   final LatLng? location;
-  final bool fromExif;
+  final _LocationSource source;
+  final bool locating;
   final VoidCallback? onEdit;
+  final VoidCallback? onUseCurrent;
   final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final location = this.location;
+    final subtitle = switch ((location, source)) {
+      (null, _) => Text(l10n.captureNoLocationHint),
+      (_, _LocationSource.exif) => Text(l10n.captureLocationFromPhoto),
+      (_, _LocationSource.device) => Text(l10n.captureLocationFromDevice),
+      _ => null,
+    };
     return Card(
       child: ListTile(
         leading: Icon(
@@ -525,12 +610,22 @@ class _LocationCard extends StatelessWidget {
               : '${location.latitude.toStringAsFixed(5)}, '
                     '${location.longitude.toStringAsFixed(5)}',
         ),
-        subtitle: location == null
-            ? Text(l10n.captureNoLocationHint)
-            : (fromExif ? Text(l10n.captureLocationFromPhoto) : null),
+        subtitle: subtitle,
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (location == null)
+              IconButton(
+                icon: locating
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.my_location),
+                tooltip: l10n.captureUseCurrentLocation,
+                onPressed: onUseCurrent,
+              ),
             if (onClear != null)
               IconButton(
                 icon: const Icon(Icons.clear),

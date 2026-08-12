@@ -80,12 +80,22 @@ class CustomFieldEditor extends StatelessWidget {
           ],
           onChanged: onChanged,
         );
-      case 'bool':
+      case 'bool' when field.required:
         return SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(label),
           value: value == '1',
           onChanged: (on) => onChanged(on ? '1' : '0'),
+        );
+      case 'bool':
+        // Optional bools are tristate so "not set" stays expressible; the
+        // tap cycle passes through null on the way back to unchecked.
+        return CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(label),
+          tristate: true,
+          value: value == null ? null : value == '1',
+          onChanged: (on) => onChanged(on == null ? null : (on ? '1' : '0')),
         );
       case 'date':
         return _DateField(
@@ -101,7 +111,10 @@ class CustomFieldEditor extends StatelessWidget {
             labelText: label,
             border: const OutlineInputBorder(),
           ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          keyboardType: TextInputType.numberWithOptions(
+            signed: true,
+            decimal: field.fieldFormat == 'float',
+          ),
           onChanged: (text) => onChanged(text.isEmpty ? null : text),
         );
       default:
