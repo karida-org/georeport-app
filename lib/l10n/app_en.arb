@@ -338,5 +338,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "issueShareTooltip": "Share"
 }

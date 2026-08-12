@@ -227,5 +227,6 @@
   "settingsVersion": "バージョン {version}",
   "settingsLicenseLine": "GPL-3.0-or-later のフリーソフトウェアです。",
   "settingsSourceCode": "ソースコード",
-  "settingsOssLicenses": "オープンソースライセンス"
+  "settingsOssLicenses": "オープンソースライセンス",
+  "issueShareTooltip": "共有"
 }
