@@ -37,8 +37,6 @@
   "issueAuthorLabel": "作成者",
   "issueDoneRatioLabel": "進捗",
   "issueCustomFieldsHeading": "詳細",
-  "issueCopyLinkTooltip": "リンクをコピー",
-  "issueLinkCopied": "リンクをコピーしました。",
   "issueJournalEdited": "{name} が編集されました",
   "issueJournalUnset": "（なし）",
   "captureTitle": "新しいチケット",

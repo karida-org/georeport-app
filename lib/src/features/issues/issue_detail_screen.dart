@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -84,19 +83,10 @@ class IssueDetailScreen extends ConsumerWidget {
               ),
             ),
           ],
-          if (document.value case final IssueDocument issue) ...[
-            IconButton(
-              icon: const Icon(Icons.link),
-              tooltip: l10n.issueCopyLinkTooltip,
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: issue.iri));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(l10n.issueLinkCopied)));
-                }
-              },
-            ),
+          if (document.value case final IssueDocument issue)
+            // One action covers both hand-offs: the system share sheet
+            // carries its own Copy, so a separate copy-link button would
+            // just duplicate it.
             // Builder: the share sheet needs the button's own render box as
             // the popover anchor on iPads.
             Builder(
@@ -117,7 +107,6 @@ class IssueDetailScreen extends ConsumerWidget {
                 },
               ),
             ),
-          ],
         ],
       ),
       body: document.when(
