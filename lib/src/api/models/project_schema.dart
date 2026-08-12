@@ -1,10 +1,46 @@
 /// Parsed `GET /gtt_sync/projects/:id/schema`: what a permission-aware
 /// create/edit form may offer for the current user in one project.
+/// One selectable option of a reference field (assignee, priority,
+/// category, version): Redmine expects the numeric id, people read the name.
+class SchemaOption {
+  const SchemaOption({required this.id, required this.name});
+
+  final int id;
+  final String name;
+}
+
+/// The schema's reference options, narrowed rather than cast: an unexpected
+/// shape yields no options (the picker hides) instead of throwing during
+/// parse. Entries without a usable id and name are dropped, since neither
+/// a nameless option nor one Redmine cannot resolve is selectable.
+Map<String, List<SchemaOption>> _references(Object? raw) {
+  if (raw is! Map<String, dynamic>) {
+    return const {};
+  }
+  final references = <String, List<SchemaOption>>{};
+  for (final entry in raw.entries) {
+    final options = <SchemaOption>[];
+    for (final option in entry.value is List ? entry.value as List : const []) {
+      if (option is! Map<String, dynamic>) {
+        continue;
+      }
+      final id = (option['id'] as num?)?.toInt() ?? 0;
+      final name = option['name'] as String? ?? '';
+      if (id > 0 && name.isNotEmpty) {
+        options.add(SchemaOption(id: id, name: name));
+      }
+    }
+    references[entry.key] = options;
+  }
+  return references;
+}
+
 class ProjectSchema {
   const ProjectSchema({
     required this.trackers,
     required this.customFields,
     required this.writable,
+    this.references = const {},
     this.timeEntry = const TimeEntrySection(),
   });
 
@@ -25,6 +61,7 @@ class ProjectSchema {
       writable: (json['writable'] as List<dynamic>? ?? const [])
           .whereType<String>()
           .toSet(),
+      references: _references(json['references']),
       timeEntry: json['time_entry'] is Map<String, dynamic>
           ? TimeEntrySection.fromJson(
               json['time_entry'] as Map<String, dynamic>,
@@ -36,6 +73,11 @@ class ProjectSchema {
   final List<SchemaTracker> trackers;
   final List<SchemaCustomField> customFields;
   final Set<String> writable;
+
+  /// Selectable options per reference field (`assigned_to_id`,
+  /// `priority_id`, `category_id`, `fixed_version_id`), served by the
+  /// schema so pickers never guess ids.
+  final Map<String, List<SchemaOption>> references;
 
   /// Whether and how the user may log time in this project; absent on
   /// servers without the time-entry contract.

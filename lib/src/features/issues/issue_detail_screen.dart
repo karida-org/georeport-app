@@ -15,6 +15,7 @@ import '../time/time_providers.dart';
 import '../time/timers_card.dart';
 import 'detail/attachments_section.dart';
 import 'detail/custom_fields_section.dart';
+import 'detail/edit_issue_screen.dart';
 import 'detail/issue_map_snippet.dart';
 import 'detail/journals_section.dart';
 import 'detail/update_sheets.dart';
@@ -115,6 +116,13 @@ class _IssueDetailScreenState extends ConsumerState<IssueDetailScreen> {
               ),
             ),
           ],
+          if (document.value case final IssueDocument issue
+              when canEditIssue(issue))
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: l10n.editIssueTooltip,
+              onPressed: () => showEditIssueScreen(context, issue: issue),
+            ),
           if (document.value case final IssueDocument issue)
             // One action covers both hand-offs: the system share sheet
             // carries its own Copy, so a separate copy-link button would

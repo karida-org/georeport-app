@@ -371,5 +371,20 @@
         "type": "int"
       }
     }
+  },
+  "editIssueTitle": "Edit issue",
+  "editIssueTooltip": "Edit",
+  "issuePriorityLabel": "Priority",
+  "editIssueClearDue": "Clear due date",
+  "editIssueAdjustLocation": "Adjust location",
+  "editIssueLocationChanged": "Location adjusted",
+  "editIssueSaved": "Issue updated.",
+  "editIssueFailed": "Could not save the changes: {message}",
+  "@editIssueFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
   }
 }

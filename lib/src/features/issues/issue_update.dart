@@ -20,9 +20,15 @@ Map<String, dynamic> buildIssueUpdatePayload({
   int? statusId,
   String? notes,
   List<Map<String, String>> uploads = const [],
+  Map<String, dynamic> fields = const {},
 }) {
   return {
     'issue': {
+      // Field edits first, and stripped of the keys this function owns, so
+      // no caller can smuggle in a version, a status, notes, or uploads
+      // through the field map.
+      for (final entry in fields.entries)
+        if (!_reservedUpdateKeys.contains(entry.key)) entry.key: entry.value,
       'lock_version': lockVersion,
       'status_id': ?statusId,
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
@@ -30,6 +36,9 @@ Map<String, dynamic> buildIssueUpdatePayload({
     },
   };
 }
+
+/// Keys [buildIssueUpdatePayload] sets from its own parameters.
+const _reservedUpdateKeys = {'lock_version', 'status_id', 'notes', 'uploads'};
 
 /// Whether a rejected update means "someone changed the issue first".
 /// RedMica's REST answers a stale lock_version with 422 and an EMPTY errors
@@ -67,6 +76,7 @@ class IssueUpdater {
     int? statusId,
     String? notes,
     List<DraftPhoto> photos = const [],
+    Map<String, dynamic> fields = const {},
   }) async {
     final client = _ref.read(activeClientProvider);
     final uploads = <Map<String, String>>[];
@@ -87,6 +97,7 @@ class IssueUpdater {
           statusId: statusId,
           notes: notes,
           uploads: uploads,
+          fields: fields,
         ),
       );
     } on DioException catch (error) {

@@ -81,4 +81,44 @@ void main() {
       expect(isStaleWriteError(error()), isFalse);
     });
   });
+
+  test('field edits merge in, with versioning keys winning', () {
+    final payload = buildIssueUpdatePayload(
+      lockVersion: 7,
+      fields: {
+        'subject': 'New subject',
+        'assigned_to_id': '',
+        'due_date': '2026-08-20',
+        'lock_version': 999, // must not override the loaded version
+      },
+    );
+    final issue = payload['issue'] as Map<String, dynamic>;
+    expect(issue['subject'], 'New subject');
+    expect(issue['assigned_to_id'], '');
+    expect(issue['due_date'], '2026-08-20');
+    expect(issue['lock_version'], 7);
+    expect(issue.containsKey('status_id'), isFalse);
+  });
+
+  test('reserved keys cannot be smuggled in through fields', () {
+    final payload = buildIssueUpdatePayload(
+      lockVersion: 3,
+      fields: {
+        'subject': 'Kept',
+        // All four are owned by the function's own parameters.
+        'lock_version': 999,
+        'status_id': 42,
+        'notes': 'sneaky',
+        'uploads': [
+          {'token': 'x'},
+        ],
+      },
+    );
+    final issue = payload['issue'] as Map<String, dynamic>;
+    expect(issue['subject'], 'Kept');
+    expect(issue['lock_version'], 3);
+    expect(issue.containsKey('status_id'), isFalse);
+    expect(issue.containsKey('notes'), isFalse);
+    expect(issue.containsKey('uploads'), isFalse);
+  });
 }
