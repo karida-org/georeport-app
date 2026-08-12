@@ -53,3 +53,9 @@ request. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).
+
+Distribution through app stores whose terms conflict with the plain GPL
+(notably the Apple App Store) is covered by an additional permission under
+GPLv3 section 7: see
+[LICENSE-APPSTORE-EXCEPTION](LICENSE-APPSTORE-EXCEPTION). Contributions
+are accepted under the GPLv3 including this additional permission.
