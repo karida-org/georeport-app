@@ -90,7 +90,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     // the issues screen.
     ref.listen(connectionManagerProvider, (previous, next) {
       if (next.value?.active != null && mounted) {
-        context.go('/issues');
+        context.go('/home');
       }
     });
     final manager = ref.watch(connectionManagerProvider);

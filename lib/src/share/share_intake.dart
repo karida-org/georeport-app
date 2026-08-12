@@ -16,7 +16,7 @@ final hasActiveConnectionProvider = Provider<bool>(
 /// How delivered shares reach the capture flow; a seam for tests.
 final shareNavigatorProvider = Provider<void Function(List<String> paths)>(
   (ref) =>
-      (paths) => router.go('/capture', extra: paths),
+      (paths) => router.push('/capture', extra: paths),
 );
 
 final shareIntakeProvider = NotifierProvider<ShareIntake, List<String>>(

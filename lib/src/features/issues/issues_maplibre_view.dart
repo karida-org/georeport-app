@@ -145,7 +145,7 @@ class _IssuesMapLibreViewState extends State<IssuesMapLibreView> {
     // lossy on web), so the issue id rides in the properties.
     final id = int.tryParse('${features.first.properties['id']}');
     if (id != null && mounted) {
-      context.go('/issues/$id');
+      context.push('/issues/$id');
     }
   }
 }
