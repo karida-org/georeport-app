@@ -3,10 +3,15 @@ import 'issue_summary.dart';
 
 /// One issue from a bundle: its summary plus geometry (null when unplaced).
 class BundleIssue {
-  const BundleIssue({required this.summary, this.geometry});
+  const BundleIssue({required this.summary, this.geometry, this.geometryJson});
 
   final IssueSummary summary;
   final IssueGeometry? geometry;
+
+  /// The untouched GeoJSON geometry object, preserved for map engines that
+  /// consume GeoJSON sources directly (the typed [geometry] drops Multi*
+  /// details such as polygon holes).
+  final Map<String, dynamic>? geometryJson;
 
   bool get isPlaced => geometry != null;
 }
@@ -78,13 +83,13 @@ Iterable<BundleIssue> _featureCollection(Object? raw) {
   final features = collection?['features'] as List<dynamic>? ?? const [];
   return features.map((feature) {
     final featureJson = feature as Map<String, dynamic>;
+    final geometryJson = featureJson['geometry'] as Map<String, dynamic>?;
     return BundleIssue(
       summary: IssueSummary.fromJson(
         featureJson['properties'] as Map<String, dynamic>,
       ),
-      geometry: IssueGeometry.fromJson(
-        featureJson['geometry'] as Map<String, dynamic>?,
-      ),
+      geometry: IssueGeometry.fromJson(geometryJson),
+      geometryJson: geometryJson,
     );
   });
 }

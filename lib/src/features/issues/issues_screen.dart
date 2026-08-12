@@ -6,7 +6,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../connect/connection_provider.dart';
 import 'issue_providers.dart';
 import 'issues_list_view.dart';
-import 'issues_map_view.dart';
+import 'issues_maplibre_view.dart';
 
 class IssuesScreen extends ConsumerWidget {
   const IssuesScreen({super.key});
@@ -66,7 +66,7 @@ class IssuesScreen extends ConsumerWidget {
           data: (data) => TabBarView(
             children: [
               IssuesListView(bundle: data),
-              IssuesMapView(bundle: data),
+              IssuesMapLibreView(bundle: data),
             ],
           ),
         ),

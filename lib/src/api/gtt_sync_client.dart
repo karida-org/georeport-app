@@ -69,4 +69,13 @@ class GttSyncClient {
     );
     return IssueDocument.fromJson(response.data!);
   }
+
+  /// Raw GTT styling settings (tracker icons, tile layers).
+  ///
+  /// This is a `redmine_gtt` baseline endpoint, not part of the gtt_sync
+  /// contract; treat everything in it as optional decoration.
+  Future<Map<String, dynamic>> gttSettings() async {
+    final response = await _dio.get<Map<String, dynamic>>('/gtt/settings.json');
+    return response.data ?? const {};
+  }
 }
