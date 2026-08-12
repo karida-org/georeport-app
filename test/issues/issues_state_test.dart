@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:georeport/src/api/models/bundle.dart';
 import 'package:georeport/src/api/models/changes_page.dart';
 import 'package:georeport/src/api/models/issue_summary.dart';
-import 'package:georeport/src/features/issues/issues_store.dart';
+import 'package:georeport/src/features/issues/issues_state.dart';
 
 BundleIssue _issue(int id, {DateTime? due, String subject = 'x'}) {
   return BundleIssue(

@@ -10,6 +10,7 @@ class GttStyleSettings {
     this.trackerSvgs = const {},
     this.statusNames = const {},
     this.statusColors = const {},
+    this.raw = const {},
   });
 
   factory GttStyleSettings.fromJson(Map<String, dynamic> json) {
@@ -64,6 +65,7 @@ class GttStyleSettings {
     }
 
     return GttStyleSettings(
+      raw: json,
       trackerNames: trackerNames,
       trackerSvgs: trackerSvgs,
       statusNames: statusNames,
@@ -75,6 +77,10 @@ class GttStyleSettings {
   final Map<int, String> trackerSvgs;
   final Map<int, String> statusNames;
   final Map<int, String> statusColors;
+
+  /// The payload this was parsed from, verbatim, for the offline session
+  /// cache. Empty for the default (no styling) instance.
+  final Map<String, dynamic> raw;
 
   /// The icon field is a JSON string inside the JSON, holding
   /// `{"id": ..., "svg": "<svg .../>"}`.

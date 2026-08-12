@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../api/base_url.dart';
 import '../api/client_auth.dart';
@@ -12,7 +13,9 @@ import '../auth/oauth_config.dart';
 import '../auth/oauth_flow.dart';
 import '../auth/oauth_tokens.dart';
 import '../auth/token_manager.dart';
+import '../features/issues/issues_cache.dart';
 import 'connection.dart';
+import 'connection_meta_cache.dart';
 import 'connection_store.dart';
 import 'scope_drift.dart';
 
@@ -260,6 +263,14 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     await _revokeBestEffort(connectionId);
     await _store.deleteSecret(connectionId);
     await ref.read(scopeDriftDismissalsProvider).clear(connectionId);
+    // Forgetting an instance forgets its cached data too.
+    await (await _metaCache()).clear(connectionId);
+    try {
+      final documents = await getApplicationDocumentsDirectory();
+      await IssuesCache(IssuesCache.fileFor(documents, connectionId)).clear();
+    } on Exception catch (error) {
+      debugPrint('Issues cache cleanup failed (ignored): $error');
+    }
     final remaining = current.connections
         .where((Connection c) => c.id != connectionId)
         .toList();
@@ -312,7 +323,28 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
         auth: ApiKeyAuth(apiKey),
       );
     }
-    final capabilities = await client.capabilities();
+    final Capabilities capabilities;
+    try {
+      capabilities = await client.capabilities();
+    } on Exception catch (error) {
+      // An unreachable server is a normal part of field work: resume the
+      // session from the last known metadata and let the sync status tell
+      // the story. A server that answered (4xx/5xx) is never bridged.
+      final meta = isUnreachableError(error)
+          ? await (await _metaCache()).load(connection.id)
+          : null;
+      if (meta == null) {
+        rethrow;
+      }
+      debugPrint('Offline resume for ${connection.label}: $error');
+      return ActiveConnection(
+        connection: connection,
+        client: client,
+        capabilities: meta.capabilities,
+        styleSettings: meta.styleSettings,
+        currentUser: meta.currentUser,
+      );
+    }
     return _enrich(
       connection,
       client,
@@ -323,6 +355,9 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       ),
     );
   }
+
+  Future<ConnectionMetaCache> _metaCache() async =>
+      ConnectionMetaCache(await getApplicationDocumentsDirectory());
 
   /// Completes a session with optional per-instance context: styling and the
   /// signed-in account. Both are decoration; failures degrade to defaults.
@@ -344,6 +379,24 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       user = fetched.displayName.isEmpty ? null : fetched;
     } on Exception catch (error) {
       debugPrint('Current user unavailable: $error');
+    }
+    // The offline-resume snapshot; failures are ignored because a session
+    // that cannot be cached is still a working session. An activation can
+    // race a removal, so a connection that vanished from the saved list is
+    // not re-cached (an empty state means the initial build, where no
+    // removal can be running yet).
+    final saved = state.value?.connections;
+    if (saved == null || saved.any((c) => c.id == connection.id)) {
+      try {
+        await (await _metaCache()).save(
+          connection.id,
+          capabilities: capabilities,
+          styleSettings: style,
+          currentUser: user,
+        );
+      } on Exception catch (error) {
+        debugPrint('Connection meta cache write failed (ignored): $error');
+      }
     }
     return ActiveConnection(
       connection: connection,

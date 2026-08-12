@@ -2,7 +2,11 @@
 /// Used to scope "assigned to me"; optional, since a token or role may not
 /// permit the endpoint.
 class CurrentUser {
-  const CurrentUser({required this.id, required this.displayName});
+  const CurrentUser({
+    required this.id,
+    required this.displayName,
+    this.raw = const {},
+  });
 
   factory CurrentUser.fromJson(Map<String, dynamic> json) {
     final user = json['user'];
@@ -16,6 +20,7 @@ class CurrentUser {
       lastname,
     ].where((part) => part.isNotEmpty).join(' ');
     return CurrentUser(
+      raw: json,
       id: (user['id'] as num?)?.toInt() ?? 0,
       displayName: name,
     );
@@ -26,4 +31,8 @@ class CurrentUser {
   /// Redmine's display form (firstname lastname), which is what bundle
   /// summaries carry in `assigned_to`.
   final String displayName;
+
+  /// The payload this was parsed from, verbatim, for the offline session
+  /// cache.
+  final Map<String, dynamic> raw;
 }

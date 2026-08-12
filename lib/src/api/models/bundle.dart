@@ -37,6 +37,15 @@ class BundleProject {
   final String identifier;
   final String name;
   final bool hasBoundary;
+
+  /// The compact shape the offline cache stores; [fromJson] reads it back
+  /// (`has_boundary` is written as the derived boolean).
+  Map<String, dynamic> toCacheJson() => {
+    'id': id,
+    'identifier': identifier,
+    'name': name,
+    'has_boundary': hasBoundary,
+  };
 }
 
 /// Parsed bundle response. Handles both the cross-project form

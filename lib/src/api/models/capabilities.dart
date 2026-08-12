@@ -7,6 +7,7 @@ class Capabilities {
     required this.features,
     this.textFormatting,
     this.oauth,
+    this.raw = const {},
   });
 
   factory Capabilities.fromJson(Map<String, dynamic> json) {
@@ -16,6 +17,7 @@ class Capabilities {
     final formatting = json['formatting'] as Map<String, dynamic>?;
     final oauth = json['oauth'] as Map<String, dynamic>?;
     return Capabilities(
+      raw: json,
       plugin: json['plugin'] as String? ?? '',
       version: json['version'] as String? ?? '',
       redmineVersion: redmine['version'] as String? ?? '',
@@ -31,6 +33,10 @@ class Capabilities {
   final Map<String, bool> features;
   final String? textFormatting;
   final OAuthInfo? oauth;
+
+  /// The payload this was parsed from, verbatim, so the offline session
+  /// cache can persist and re-parse it without hand-written serialization.
+  final Map<String, dynamic> raw;
 
   bool supports(String feature) => features[feature] ?? false;
 }

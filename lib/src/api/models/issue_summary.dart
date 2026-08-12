@@ -22,10 +22,12 @@ class IssueSummary {
     this.estimatedHours,
     this.createdOn,
     this.updatedOn,
+    this.raw = const {},
   });
 
   factory IssueSummary.fromJson(Map<String, dynamic> json) {
     return IssueSummary(
+      raw: json,
       id: (json['id'] as num).toInt(),
       projectId: (json['project_id'] as num).toInt(),
       subject: json['subject'] as String? ?? '',
@@ -63,6 +65,11 @@ class IssueSummary {
   final double? estimatedHours;
   final DateTime? createdOn;
   final DateTime? updatedOn;
+
+  /// The payload this summary was parsed from, kept verbatim so the offline
+  /// cache can persist exactly what the server sent (re-parsed on load; no
+  /// hand-written serialization to drift out of sync with the contract).
+  final Map<String, dynamic> raw;
 }
 
 DateTime? _date(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;
