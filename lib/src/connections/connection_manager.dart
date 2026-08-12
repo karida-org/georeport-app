@@ -127,6 +127,9 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     await _commit(connection, await _enrich(connection, client, capabilities));
   }
 
+  /// Activates a saved connection. Failures (dead session, offline) throw
+  /// to the caller and leave the saved list untouched, so the UI can offer
+  /// re-authentication instead of losing state.
   Future<void> activate(String connectionId) async {
     final current = state.value;
     final connection = current?.connections
@@ -135,15 +138,91 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     if (connection == null) {
       return;
     }
-    state = await AsyncValue.guard(() async {
-      final active = await _activate(connection);
-      await _store.saveActiveId(connection.id);
-      return ConnectionsState(
-        connections: current!.connections,
-        active: active,
-      );
-    });
+    final active = await _activate(connection);
+    await _store.saveActiveId(connection.id);
+    state = AsyncData(
+      ConnectionsState(connections: current!.connections, active: active),
+    );
   }
+
+  /// Renames a saved connection; the id, credentials, and everything else
+  /// stay untouched.
+  Future<void> rename(String connectionId, String label) async {
+    final current = state.value;
+    final trimmed = label.trim();
+    if (current == null || trimmed.isEmpty) {
+      return;
+    }
+    final connections = [
+      for (final connection in current.connections)
+        if (connection.id == connectionId)
+          Connection(
+            id: connection.id,
+            label: trimmed,
+            baseUrl: connection.baseUrl,
+            authKind: connection.authKind,
+          )
+        else
+          connection,
+    ];
+    await _store.saveConnections(connections);
+    var active = current.active;
+    if (active != null && active.connection.id == connectionId) {
+      active = ActiveConnection(
+        connection: connections.firstWhere((c) => c.id == connectionId),
+        client: active.client,
+        capabilities: active.capabilities,
+        styleSettings: active.styleSettings,
+        currentUser: active.currentUser,
+      );
+    }
+    state = AsyncData(
+      ConnectionsState(connections: connections, active: active),
+    );
+  }
+
+  /// Re-runs the browser sign-in for a saved OAuth connection whose session
+  /// died (revoked token, expired refresh token), writing the new tokens
+  /// under the existing connection id so its identity survives.
+  Future<void> reauthenticateOAuth(String connectionId) async {
+    final connection = _saved(connectionId);
+    if (connection == null) {
+      return;
+    }
+    final capabilities = await probe(connection.baseUrl);
+    final config = oauthConfigFor(connection.baseUrl, capabilities);
+    if (config == null) {
+      throw const OAuthFlowException(
+        'This instance does not offer app sign-in.',
+      );
+    }
+    final tokens = await ref.read(oauthFlowProvider).authorize(config);
+    await _persistOAuthSecret(connectionId, config, tokens);
+    await activate(connectionId);
+  }
+
+  /// Replaces a saved connection's API key in place (rotated keys), after
+  /// verifying the new key against the instance.
+  Future<void> reauthenticateApiKey(String connectionId, String apiKey) async {
+    final connection = _saved(connectionId);
+    if (connection == null) {
+      return;
+    }
+    final client = GttSyncClient(
+      baseUrl: connection.baseUrl,
+      auth: ApiKeyAuth(apiKey),
+    );
+    await client.validateAuth();
+    await _store.writeSecret(connectionId, {
+      'kind': 'api_key',
+      'api_key': apiKey,
+    });
+    await activate(connectionId);
+  }
+
+  Connection? _saved(String connectionId) => state.value?.connections
+      .where((Connection c) => c.id == connectionId)
+      .firstOrNull;
 
   Future<void> remove(String connectionId) async {
     final current = state.value;
