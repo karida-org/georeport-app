@@ -238,5 +238,11 @@
         "type": "String"
       }
     }
-  }
+  },
+  "connectRenameAction": "Rename",
+  "connectRenameTitle": "Rename this instance",
+  "connectRenameLabel": "Name",
+  "connectReauthAction": "Sign in again",
+  "connectNewApiKeyTitle": "Enter the new API key",
+  "saveButton": "Save"
 }

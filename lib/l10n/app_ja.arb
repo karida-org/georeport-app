@@ -148,5 +148,11 @@
         "type": "String"
       }
     }
-  }
+  },
+  "connectRenameAction": "名前を変更",
+  "connectRenameTitle": "インスタンス名を変更",
+  "connectRenameLabel": "名前",
+  "connectReauthAction": "再サインイン",
+  "connectNewApiKeyTitle": "新しいAPIキーを入力",
+  "saveButton": "保存"
 }
