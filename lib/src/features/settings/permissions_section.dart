@@ -35,8 +35,9 @@ class PermissionsSection extends ConsumerWidget {
               child: Text(l10n.settingsPermissionAllow),
             ),
             LocationPermissionState.systemSettingsOnly => TextButton(
-              onPressed: () =>
-                  ref.read(locationPermissionServiceProvider).openSystemSettings(),
+              onPressed: () => ref
+                  .read(locationPermissionServiceProvider)
+                  .openSystemSettings(),
               child: Text(l10n.settingsOpenSystemSettings),
             ),
             _ => null,
@@ -47,8 +48,9 @@ class PermissionsSection extends ConsumerWidget {
           title: Text(l10n.settingsOtherPermissions),
           subtitle: Text(l10n.settingsOtherPermissionsBody),
           trailing: TextButton(
-            onPressed: () =>
-                ref.read(locationPermissionServiceProvider).openSystemSettings(),
+            onPressed: () => ref
+                .read(locationPermissionServiceProvider)
+                .openSystemSettings(),
             child: Text(l10n.settingsOpenSystemSettings),
           ),
         ),

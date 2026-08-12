@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 
 /// A titled group of settings rows; shared look for every section.
 class SettingsSection extends StatelessWidget {
-  const SettingsSection({required this.title, required this.children, super.key});
+  const SettingsSection({
+    required this.title,
+    required this.children,
+    super.key,
+  });
 
   final String title;
   final List<Widget> children;

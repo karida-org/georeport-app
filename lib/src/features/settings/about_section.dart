@@ -24,9 +24,7 @@ class AboutSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final info = ref.watch(packageInfoProvider).value;
-    final version = info == null
-        ? ''
-        : '${info.version} (${info.buildNumber})';
+    final version = info == null ? '' : '${info.version} (${info.buildNumber})';
     return SettingsSection(
       title: l10n.settingsAboutHeading,
       children: [
