@@ -1,92 +1,224 @@
 {
-  "@id": "https://localhost:3000/issues/36",
+  "@id": "https://localhost:3000/issues/32",
   "@type": "gtt:Issue",
-  "identifier": 36,
-  "subject": "Survey marker verification (internal)",
-  "description": "## Summary\r\n\r\nInternal check of the benchmark marker; not for public view.",
+  "identifier": 32,
+  "subject": "Broken streetlight near the station (CONFIRMED)",
+  "description": "The streetlight by the north exit has been out for several nights.",
   "status": {
-    "@id": "https://localhost:3000/issue_statuses/1",
-    "id": 1,
-    "name": "New"
+    "@id": "https://localhost:3000/issue_statuses/3",
+    "id": 3,
+    "name": "Resolved"
   },
   "tracker": {
-    "@id": "https://localhost:3000/trackers/1",
-    "id": 1,
-    "name": "Task"
+    "@id": "https://localhost:3000/trackers/2",
+    "id": 2,
+    "name": "Problem"
   },
   "project": {
-    "@id": "https://localhost:3000/projects/field-survey",
-    "id": 5,
-    "identifier": "field-survey",
-    "name": "Field Survey"
+    "@id": "https://localhost:3000/projects/demo",
+    "id": 4,
+    "identifier": "demo",
+    "name": "Demo Reports"
   },
   "priority": {
-    "@id": "https://localhost:3000/enumerations/2",
-    "id": 2,
-    "name": "Normal"
+    "@id": "https://localhost:3000/enumerations/3",
+    "id": 3,
+    "name": "High"
   },
   "author": {
-    "@id": "https://localhost:3000/users/1",
-    "id": 1,
-    "name": "Site Administrator"
-  },
-  "assigned_to": {
     "@id": "https://localhost:3000/users/5",
     "id": 5,
     "name": "Sora Field"
   },
-  "done_ratio": 0,
-  "is_private": true,
+  "assigned_to": {
+    "@id": "https://localhost:3000/users/1",
+    "id": 1,
+    "name": "Site Administrator"
+  },
+  "start_date": "2026-07-06",
+  "due_date": "2026-07-09",
+  "done_ratio": 100,
+  "is_private": false,
   "geometry": {
     "type": "Point",
     "coordinates": [
-      135.357,
-      34.748,
+      135.35959,
+      34.74544,
       0.0
     ]
   },
-  "asWKT": "SRID=4326;Point (135.357 34.748 0.0)",
-  "lock_version": 2,
+  "asWKT": "SRID=4326;Point (135.35959 34.74544 0.0)",
+  "lock_version": 7,
   "created_on": "2026-07-12T03:44:23Z",
-  "updated_on": "2026-07-14T03:57:57Z",
+  "updated_on": "2026-08-12T03:25:18Z",
   "journals": [
     {
-      "id": 63,
+      "id": 26,
       "user": {
         "@id": "https://localhost:3000/users/1",
         "id": 1,
         "name": "Site Administrator"
       },
-      "created_on": "2026-07-14T03:57:57Z",
+      "created_on": "2026-07-12T03:44:23Z",
+      "notes": "Crew scheduling is tight this week, this may slip a day. Internal only.",
+      "private_notes": true,
+      "notes_editable": true,
+      "details": []
+    },
+    {
+      "id": 27,
+      "user": {
+        "@id": "https://localhost:3000/users/1",
+        "id": 1,
+        "name": "Site Administrator"
+      },
+      "created_on": "2026-07-12T03:44:23Z",
+      "notes": "Thanks for the report. Dispatching a crew to take a look.",
+      "private_notes": false,
+      "notes_editable": true,
+      "details": [
+        {
+          "property": "attr",
+          "name": "status_id",
+          "old_value": "1",
+          "new_value": "2",
+          "old_label": "New",
+          "new_label": "In Progress"
+        },
+        {
+          "property": "attr",
+          "name": "done_ratio",
+          "old_value": "0",
+          "new_value": "20"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "user": {
+        "@id": "https://localhost:3000/users/1",
+        "id": 1,
+        "name": "Site Administrator"
+      },
+      "created_on": "2026-07-12T03:44:23Z",
+      "notes": "Bulb and fuse replaced, light is back on. Please confirm tonight.",
+      "private_notes": false,
+      "notes_editable": true,
+      "details": [
+        {
+          "property": "attr",
+          "name": "status_id",
+          "old_value": "2",
+          "new_value": "3",
+          "old_label": "In Progress",
+          "new_label": "Resolved"
+        },
+        {
+          "property": "attr",
+          "name": "done_ratio",
+          "old_value": "20",
+          "new_value": "100"
+        }
+      ]
+    },
+    {
+      "id": 65,
+      "user": {
+        "@id": "https://localhost:3000/users/1",
+        "id": 1,
+        "name": "Site Administrator"
+      },
+      "created_on": "2026-07-15T19:59:28Z",
       "private_notes": false,
       "details": [
         {
           "property": "attr",
-          "name": "description",
-          "diff_url": "https://localhost:3000/journals/63/diff?detail_id=68"
+          "name": "subject",
+          "old_value": "Broken streetlight near the station",
+          "new_value": "Broken streetlight near the station (conflict test)"
+        }
+      ]
+    },
+    {
+      "id": 66,
+      "user": {
+        "@id": "https://localhost:3000/users/1",
+        "id": 1,
+        "name": "Site Administrator"
+      },
+      "created_on": "2026-07-15T19:59:28Z",
+      "private_notes": false,
+      "details": [
+        {
+          "property": "attr",
+          "name": "subject",
+          "old_value": "Broken streetlight near the station (conflict test)",
+          "new_value": "Broken streetlight near the station"
+        }
+      ]
+    },
+    {
+      "id": 90,
+      "user": {
+        "@id": "https://localhost:3000/users/1",
+        "id": 1,
+        "name": "Site Administrator"
+      },
+      "created_on": "2026-08-12T03:25:18Z",
+      "private_notes": false,
+      "details": [
+        {
+          "property": "attr",
+          "name": "subject",
+          "old_value": "Broken streetlight near the station",
+          "new_value": "Broken streetlight near the station (CONFIRMED)"
         }
       ]
     }
   ],
-  "relations": [
+  "relations": [],
+  "changesets": [],
+  "attachments": [
     {
-      "type": "blocks",
-      "issue": {
-        "@id": "https://localhost:3000/issues/43",
-        "id": 43,
-        "subject": "GNSS receiver drift check at point B"
-      }
+      "id": 1,
+      "filename": "site-photo.png",
+      "filesize": 46600,
+      "content_type": "image/png",
+      "author": {
+        "@id": "https://localhost:3000/users/1",
+        "id": 1,
+        "name": "Site Administrator"
+      },
+      "created_on": "2026-08-12T03:34:33Z",
+      "is_image": true,
+      "url": "https://localhost:3000/attachments/download/1/site-photo.png",
+      "thumbnail_url": "https://localhost:3000/attachments/thumbnail/1",
+      "editable": true,
+      "deletable": true
     }
   ],
-  "changesets": [],
-  "attachments": [],
   "custom_fields": [
+    {
+      "id": 1,
+      "name": "Severity",
+      "field_format": "list",
+      "multiple": false,
+      "value": "High",
+      "possible_values": [
+        "Low",
+        "Medium",
+        "High",
+        "Critical"
+      ],
+      "value_options": [],
+      "writable": true
+    },
     {
       "id": 2,
       "name": "Reported via",
       "field_format": "list",
       "multiple": false,
-      "value": null,
+      "value": "Phone",
       "possible_values": [
         "Phone",
         "Web app",
@@ -101,17 +233,7 @@
       "name": "On-site verified",
       "field_format": "bool",
       "multiple": false,
-      "value": null,
-      "possible_values": [],
-      "value_options": [],
-      "writable": true
-    },
-    {
-      "id": 4,
-      "name": "Inspection date",
-      "field_format": "date",
-      "multiple": false,
-      "value": "2026-07-08",
+      "value": "1",
       "possible_values": [],
       "value_options": [],
       "writable": true
@@ -176,6 +298,10 @@
     ],
     "references": {
       "assigned_to_id": [
+        {
+          "id": 6,
+          "name": "Kai Public"
+        },
         {
           "id": 1,
           "name": "Site Administrator"

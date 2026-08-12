@@ -78,12 +78,18 @@
   "issueAllowedStatusChanges": "Allowed status changes",
   "issueAttachmentsHeading": "Attachments",
   "issueHistoryHeading": "History",
-  "issueJournalChanges": "{count, plural, =1{1 field changed} other{{count} fields changed}}",
-  "@issueJournalChanges": {
+  "issueAuthorLabel": "Author",
+  "issueDoneRatioLabel": "Progress",
+  "issueCustomFieldsHeading": "Details",
+  "issueCopyLinkTooltip": "Copy link",
+  "issueLinkCopied": "Link copied.",
+  "issueJournalEdited": "{name} was edited",
+  "@issueJournalEdited": {
     "placeholders": {
-      "count": {
-        "type": "int"
+      "name": {
+        "type": "String"
       }
     }
-  }
+  },
+  "issueJournalUnset": "(none)"
 }

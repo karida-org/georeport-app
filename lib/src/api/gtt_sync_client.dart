@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import 'base_url.dart';
@@ -91,6 +93,21 @@ class GttSyncClient {
       '/users/current.json',
     );
     return CurrentUser.fromJson(response.data ?? const {});
+  }
+
+  /// Authenticated binary fetch for same-instance assets (attachment
+  /// thumbnails and downloads). Absolute URLs are reduced to their path so
+  /// the request always goes to this client's own instance with its
+  /// credentials, regardless of the canonical host the server advertises.
+  Future<Uint8List> fetchBytes(String urlOrPath) async {
+    final uri = Uri.parse(urlOrPath);
+    final path = uri.hasScheme ? uri.path : urlOrPath;
+    final response = await _dio.get<List<int>>(
+      path,
+      queryParameters: uri.hasScheme ? uri.queryParameters : null,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(response.data ?? const []);
   }
 
   /// Cheapest authenticated call on the contract, used to verify credentials

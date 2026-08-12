@@ -37,5 +37,11 @@
   "issueAllowedStatusChanges": "変更可能なステータス",
   "issueAttachmentsHeading": "添付ファイル",
   "issueHistoryHeading": "履歴",
-  "issueJournalChanges": "{count, plural, other{{count} 件のフィールドが変更されました}}"
+  "issueAuthorLabel": "作成者",
+  "issueDoneRatioLabel": "進捗",
+  "issueCustomFieldsHeading": "詳細",
+  "issueCopyLinkTooltip": "リンクをコピー",
+  "issueLinkCopied": "リンクをコピーしました。",
+  "issueJournalEdited": "{name} が編集されました",
+  "issueJournalUnset": "（なし）"
 }

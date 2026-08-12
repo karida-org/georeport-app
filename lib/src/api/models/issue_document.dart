@@ -15,11 +15,37 @@ class NamedRef {
   final String name;
 }
 
+/// One property change inside a journal entry. Description edits carry a
+/// diff URL instead of inline values; labels are present when the server
+/// resolved a reference id to a display name.
+class JournalDetail {
+  const JournalDetail({
+    required this.name,
+    this.oldValue,
+    this.newValue,
+    this.diffUrl,
+  });
+
+  factory JournalDetail.fromJson(Map<String, dynamic> json) {
+    return JournalDetail(
+      name: json['name'] as String? ?? '',
+      oldValue: _displayString(json['old_label'] ?? json['old_value']),
+      newValue: _displayString(json['new_label'] ?? json['new_value']),
+      diffUrl: json['diff_url'] as String?,
+    );
+  }
+
+  final String name;
+  final String? oldValue;
+  final String? newValue;
+  final String? diffUrl;
+}
+
 class JournalEntry {
   const JournalEntry({
     required this.id,
     required this.isPrivate,
-    required this.detailCount,
+    required this.details,
     this.userName,
     this.createdOn,
     this.notes,
@@ -30,7 +56,10 @@ class JournalEntry {
     return JournalEntry(
       id: (json['id'] as num).toInt(),
       isPrivate: json['private_notes'] == true,
-      detailCount: (json['details'] as List<dynamic>? ?? const []).length,
+      details: [
+        for (final detail in json['details'] as List<dynamic>? ?? const [])
+          if (detail is Map<String, dynamic>) JournalDetail.fromJson(detail),
+      ],
       userName: user?['name'] as String?,
       createdOn: _dateTime(json['created_on']),
       notes: json['notes'] as String?,
@@ -39,10 +68,41 @@ class JournalEntry {
 
   final int id;
   final bool isPrivate;
-  final int detailCount;
+  final List<JournalDetail> details;
   final String? userName;
   final DateTime? createdOn;
   final String? notes;
+}
+
+/// A custom field value in its detailed document form.
+class CustomFieldValue {
+  const CustomFieldValue({
+    required this.id,
+    required this.name,
+    required this.values,
+  });
+
+  factory CustomFieldValue.fromJson(Map<String, dynamic> json) {
+    final raw = json['value'];
+    // Values arrive as strings for most formats, but numeric, bool, and
+    // similar formats may serialize natively; anything non-null displays.
+    final values = switch (raw) {
+      final List<dynamic> list => [
+        for (final item in list)
+          if (_displayString(item) case final String value) value,
+      ],
+      _ => [if (_displayString(raw) case final String value) value],
+    };
+    return CustomFieldValue(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name'] as String? ?? '',
+      values: values,
+    );
+  }
+
+  final int id;
+  final String name;
+  final List<String> values;
 }
 
 class AttachmentInfo {
@@ -127,6 +187,7 @@ class IssueDocument {
     required this.lockVersion,
     required this.journals,
     required this.attachments,
+    required this.customFields,
     required this.editable,
     this.description,
     this.priority,
@@ -135,6 +196,7 @@ class IssueDocument {
     this.startDate,
     this.dueDate,
     this.geometry,
+    this.geometryJson,
     this.createdOn,
     this.updatedOn,
     this.closedOn,
@@ -160,6 +222,10 @@ class IssueDocument {
             in json['attachments'] as List<dynamic>? ?? const [])
           AttachmentInfo.fromJson(attachment as Map<String, dynamic>),
       ],
+      customFields: [
+        for (final field in json['custom_fields'] as List<dynamic>? ?? const [])
+          if (field is Map<String, dynamic>) CustomFieldValue.fromJson(field),
+      ],
       editable: EditingContract.fromJson(
         json['editable'] as Map<String, dynamic>? ?? const {},
       ),
@@ -172,6 +238,7 @@ class IssueDocument {
       geometry: IssueGeometry.fromJson(
         json['geometry'] as Map<String, dynamic>?,
       ),
+      geometryJson: json['geometry'] as Map<String, dynamic>?,
       createdOn: _dateTime(json['created_on']),
       updatedOn: _dateTime(json['updated_on']),
       closedOn: _dateTime(json['closed_on']),
@@ -189,6 +256,7 @@ class IssueDocument {
   final int lockVersion;
   final List<JournalEntry> journals;
   final List<AttachmentInfo> attachments;
+  final List<CustomFieldValue> customFields;
   final EditingContract editable;
   final String? description;
   final NamedRef? priority;
@@ -197,6 +265,10 @@ class IssueDocument {
   final DateTime? startDate;
   final DateTime? dueDate;
   final IssueGeometry? geometry;
+
+  /// The untouched GeoJSON geometry, for handing to a map source.
+  final Map<String, dynamic>? geometryJson;
+
   final DateTime? createdOn;
   final DateTime? updatedOn;
   final DateTime? closedOn;
@@ -204,6 +276,17 @@ class IssueDocument {
 
 NamedRef? _ref(Object? raw) =>
     raw is Map<String, dynamic> ? NamedRef.fromJson(raw) : null;
+
+/// A scalar rendered for display: strings pass through, numbers and bools
+/// stringify, everything else (null, nested structures) becomes null.
+String? _displayString(Object? raw) {
+  return switch (raw) {
+    final String value when value.isNotEmpty => value,
+    final num value => '$value',
+    final bool value => '$value',
+    _ => null,
+  };
+}
 
 DateTime? _dateTime(Object? raw) =>
     raw is String ? DateTime.tryParse(raw) : null;
