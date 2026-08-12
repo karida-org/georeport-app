@@ -45,11 +45,8 @@
   },
   "connectRemoveConfirm": "Remove",
   "cancelButton": "Cancel",
-  "issuesTitle": "Issues",
-  "issuesListTab": "List",
   "issuesMapTab": "Map",
   "issuesRefreshTooltip": "Refresh",
-  "disconnectTooltip": "Disconnect",
   "issuesEmpty": "No issues are visible on this instance.",
   "issuesLoadFailed": "Could not load issues: {message}",
   "@issuesLoadFailed": {
@@ -290,5 +287,20 @@
   "myWorkFilterToday": "Today",
   "scopeDriftTitle": "New permissions available",
   "scopeDriftBody": "This server offers permissions your sign-in does not include yet. Sign in again to enable them.",
-  "scopeDriftNotNow": "Not now"
+  "scopeDriftNotNow": "Not now",
+  "navTime": "Time",
+  "navCapture": "Report",
+  "navMenuTooltip": "Menu",
+  "menuSwitchInstance": "Switch instance",
+  "menuConnectionOk": "Connected",
+  "menuConnectionProblem": "Connection problem",
+  "menuLastSync": "Last sync {time}",
+  "@menuLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "menuOffline": "Offline"
 }

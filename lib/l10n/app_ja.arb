@@ -18,11 +18,8 @@
   "connectRemoveMessage": "{label} とそのサインイン情報をこの端末から削除します。",
   "connectRemoveConfirm": "削除",
   "cancelButton": "キャンセル",
-  "issuesTitle": "チケット",
-  "issuesListTab": "一覧",
   "issuesMapTab": "地図",
   "issuesRefreshTooltip": "更新",
-  "disconnectTooltip": "切断",
   "issuesEmpty": "このインスタンスに表示できるチケットはありません。",
   "issuesLoadFailed": "チケットを読み込めませんでした: {message}",
   "retryButton": "再試行",
@@ -200,5 +197,13 @@
   "myWorkFilterToday": "今日",
   "scopeDriftTitle": "新しい権限が利用できます",
   "scopeDriftBody": "このサーバーでは、現在のサインインに含まれていない権限が提供されています。再度サインインすると有効になります。",
-  "scopeDriftNotNow": "今はしない"
+  "scopeDriftNotNow": "今はしない",
+  "navTime": "時間",
+  "navCapture": "報告",
+  "navMenuTooltip": "メニュー",
+  "menuSwitchInstance": "接続先を切り替え",
+  "menuConnectionOk": "接続中",
+  "menuConnectionProblem": "接続に問題があります",
+  "menuLastSync": "最終同期 {time}",
+  "menuOffline": "オフライン"
 }
