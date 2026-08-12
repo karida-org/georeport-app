@@ -163,7 +163,7 @@
   "captureFieldNone": "None",
   "captureLocationDenied": "Location permission was not granted.",
   "captureLocationFailed": "Could not get your location.",
-  "captureQueuedOffline": "Saved to outbox. It will upload automatically when you are back online.",
+  "captureQueuedOffline": "Saved to outbox. The app will keep trying to submit it automatically.",
   "captureNotConnected": "Not connected. Sign in again to submit this report.",
   "outboxTitle": "Outbox",
   "outboxEmpty": "Nothing waiting to upload.",

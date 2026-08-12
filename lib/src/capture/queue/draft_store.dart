@@ -90,6 +90,10 @@ class DraftStore {
   Future<Uint8List> readPhoto(QueuedDraft draft, QueuedPhoto photo) =>
       File('${_photoDir(draft.id).path}/${photo.storedName}').readAsBytes();
 
+  /// Cheap existence check (one stat), used by the queue to honor a
+  /// discard that happened after its pass snapshot was taken.
+  bool exists(String id) => _jsonFile(id).existsSync();
+
   Future<void> remove(String id) async {
     final json = _jsonFile(id);
     if (json.existsSync()) {
@@ -109,7 +113,9 @@ class DraftStore {
     }
     await for (final entity in _root.list()) {
       if (entity is Directory &&
-          !_jsonFile(entity.path.split('/').last).existsSync()) {
+          !_jsonFile(
+            entity.path.split(Platform.pathSeparator).last,
+          ).existsSync()) {
         await entity.delete(recursive: true);
       }
     }

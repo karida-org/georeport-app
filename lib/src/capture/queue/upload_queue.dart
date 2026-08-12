@@ -144,17 +144,15 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
             (snapshot.nextAttemptAt?.isAfter(now) ?? false)) {
           continue;
         }
-        // Reload by id: the user can discard an entry from the outbox
-        // while this pass runs.
-        final entry = (await store.list())
-            .where((d) => d.id == snapshot.id)
-            .firstOrNull;
-        if (entry == null) {
+        // The user can discard an entry from the outbox while this pass
+        // runs; one stat per entry honors that without rescanning the
+        // whole store.
+        if (!store.exists(snapshot.id)) {
           continue;
         }
         try {
           final result = await _processOne(
-            entry,
+            snapshot,
             ownsLock: true,
             invalidateIssues: false,
           );
