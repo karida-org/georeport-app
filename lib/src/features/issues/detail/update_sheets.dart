@@ -6,6 +6,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../api/models/issue_document.dart';
 import '../../../capture/issue_draft.dart';
 import '../../../media/mime.dart';
+import '../issue_providers.dart';
 import '../issue_update.dart';
 
 /// Moves an issue to one of the statuses the editing contract allows, with
@@ -80,6 +81,10 @@ class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
   final _note = TextEditingController();
   final _picker = ImagePicker();
   final List<DraftPhoto> _photos = [];
+  // In state, not read from the widget: after a conflict the sheet adopts
+  // the refreshed document's lock version, so a retry can succeed instead
+  // of replaying the same stale write.
+  late int _lockVersion = widget.issue.lockVersion;
   bool _submitting = false;
   String? _error;
 
@@ -137,7 +142,7 @@ class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
           .read(issueUpdaterProvider)
           .submit(
             issueId: widget.issue.id,
-            lockVersion: widget.issue.lockVersion,
+            lockVersion: _lockVersion,
             statusId: widget.statusTarget?.id,
             notes: _note.text,
             photos: List.of(_photos),
@@ -149,11 +154,27 @@ class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
         Navigator.pop(context);
       }
     } on StaleIssueException {
+      // The conflict already reloaded the document; adopt its fresh lock
+      // version (input stays in the sheet), so the user's retry after
+      // reviewing can succeed instead of replaying the same stale write.
+      var refreshed = _lockVersion;
+      try {
+        final fresh = await ref.read(
+          issueDocumentProvider(widget.issue.id).future,
+        );
+        refreshed = fresh.lockVersion;
+        // Offline right after a conflict: keep the old version; the next
+        // retry surfaces the conflict again rather than crashing here.
+        // ignore: avoid_catches_without_on_clauses
+      } catch (_) {}
       if (mounted) {
-        setState(() => _error = l10n.issueConflictBody);
+        setState(() {
+          _lockVersion = refreshed;
+          _error = l10n.issueConflictBody;
+        });
       }
-      // Validation failures and connectivity both land here; the sheet
-      // stays open so nothing typed is lost.
+      // Validation failures and connectivity errors land in this generic
+      // catch; the sheet stays open so nothing typed is lost.
       // ignore: avoid_catches_without_on_clauses
     } catch (error) {
       if (mounted) {
