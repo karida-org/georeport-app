@@ -79,7 +79,9 @@ class _IssuesMapLibreViewState extends ConsumerState<IssuesMapLibreView> {
     if (!identical(oldWidget.bundle, widget.bundle)) {
       final style = _style;
       if (style != null) {
-        updateIssueSources(style, bundleToSources(widget.bundle));
+        updateIssueSources(style, bundleToSources(widget.bundle)).catchError(
+          (Object error) => debugPrint('Map source refresh failed: $error'),
+        );
       }
     }
   }

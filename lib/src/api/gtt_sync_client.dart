@@ -76,6 +76,6 @@ class GttSyncClient {
   /// contract; treat everything in it as optional decoration.
   Future<Map<String, dynamic>> gttSettings() async {
     final response = await _dio.get<Map<String, dynamic>>('/gtt/settings.json');
-    return response.data!;
+    return response.data ?? const {};
   }
 }
