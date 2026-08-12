@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
@@ -106,6 +107,17 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // The brand mark picks its variant by theme; clearspace
+                // (one dot-diameter around the mark) comes from the padding.
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: SvgPicture.asset(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 'assets/brand/georeport-mark-dark.svg'
+                        : 'assets/brand/georeport-mark.svg',
+                    height: 72,
+                  ),
+                ),
                 Text(
                   l10n.homeTagline,
                   textAlign: TextAlign.center,
