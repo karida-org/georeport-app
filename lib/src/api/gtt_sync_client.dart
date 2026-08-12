@@ -4,6 +4,9 @@ import 'base_url.dart';
 import 'client_auth.dart';
 import 'models/bundle.dart';
 import 'models/capabilities.dart';
+import 'models/changes_page.dart';
+import 'models/current_user.dart';
+import 'models/gtt_style_settings.dart';
 import 'models/issue_document.dart';
 
 /// Thin HTTP client for the `redmine_gtt_sync` contract.
@@ -58,6 +61,36 @@ class GttSyncClient {
       '/gtt_sync/issues/$id',
     );
     return IssueDocument.fromJson(response.data!);
+  }
+
+  /// The delta feed: issues changed since [since] (a `next_since` token or an
+  /// ISO 8601 time for the first call). With [knownIds], the response also
+  /// carries the caller's full visible id set for deletion reconciliation.
+  Future<ChangesPage> changes({
+    required String since,
+    bool knownIds = false,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/gtt_sync/changes',
+      queryParameters: {'since': since, if (knownIds) 'known_ids': '1'},
+    );
+    return ChangesPage.fromJson(response.data ?? const {});
+  }
+
+  /// Instance styling (tracker names/icons, status names/colors) from the
+  /// `redmine_gtt` baseline. Optional decoration; failures yield defaults.
+  Future<GttStyleSettings> styleSettings() async {
+    return GttStyleSettings.fromJson(await gttSettings());
+  }
+
+  /// The authenticated account, from Redmine's core API. Outside the
+  /// gtt_sync contract, but identity has no contract surface yet; callers
+  /// must tolerate failure (a narrow token or role may forbid it).
+  Future<CurrentUser> currentUser() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/users/current.json',
+    );
+    return CurrentUser.fromJson(response.data ?? const {});
   }
 
   /// Cheapest authenticated call on the contract, used to verify credentials

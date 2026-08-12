@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/gtt_sync_client.dart';
-import '../../api/models/bundle.dart';
 import '../../api/models/issue_document.dart';
 import '../../connections/connection_manager.dart';
 
@@ -13,11 +12,6 @@ final activeClientProvider = Provider.autoDispose<GttSyncClient>((ref) {
     throw StateError('Not connected');
   }
   return client;
-});
-
-/// The cross-project bundle for the active connection.
-final bundleProvider = FutureProvider.autoDispose<Bundle>((ref) {
-  return ref.watch(activeClientProvider).bundle();
 });
 
 /// A single issue document, fetched on demand.

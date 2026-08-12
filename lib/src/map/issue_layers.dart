@@ -53,9 +53,13 @@ Future<void> updateIssueSources(
 }
 
 /// Adds the issue style layers: polygon fill and outline, lines, and the
-/// status-colored point circles, all driven by `status_id`.
-Future<void> addIssueLayers(StyleController style) async {
-  final statusColor = statusColorExpression();
+/// status-colored point circles, all driven by `status_id`. Instance-defined
+/// [statusColors] win over the built-in fallbacks.
+Future<void> addIssueLayers(
+  StyleController style, {
+  Map<int, String>? statusColors,
+}) async {
+  final statusColor = statusColorExpression(statusColors ?? const {});
   await style.addLayer(
     FillStyleLayer(
       id: 'issues-polygons-fill',

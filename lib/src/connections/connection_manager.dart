@@ -6,6 +6,8 @@ import '../api/base_url.dart';
 import '../api/client_auth.dart';
 import '../api/gtt_sync_client.dart';
 import '../api/models/capabilities.dart';
+import '../api/models/current_user.dart';
+import '../api/models/gtt_style_settings.dart';
 import '../auth/oauth_config.dart';
 import '../auth/oauth_flow.dart';
 import '../auth/oauth_tokens.dart';
@@ -19,11 +21,21 @@ class ActiveConnection {
     required this.connection,
     required this.client,
     required this.capabilities,
+    this.styleSettings = const GttStyleSettings(),
+    this.currentUser,
   });
 
   final Connection connection;
   final GttSyncClient client;
   final Capabilities capabilities;
+
+  /// Instance styling (status colors, tracker names/icons); defaults when
+  /// the instance does not serve it.
+  final GttStyleSettings styleSettings;
+
+  /// The signed-in account, when the token or role allows reading it; null
+  /// hides identity-scoped features such as "assigned to me".
+  final CurrentUser? currentUser;
 }
 
 /// What the UI observes: the saved list and the currently active session.
@@ -92,14 +104,7 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       'kind': 'api_key',
       'api_key': apiKey,
     });
-    await _commit(
-      connection,
-      ActiveConnection(
-        connection: connection,
-        client: client,
-        capabilities: capabilities,
-      ),
-    );
+    await _commit(connection, await _enrich(connection, client, capabilities));
   }
 
   /// Runs the browser sign-in against an instance advertising a mobile OAuth
@@ -119,14 +124,7 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     final connection = _newConnection(normalized, ConnectionAuthKind.oauth);
     await _persistOAuthSecret(connection.id, config, tokens);
     final client = _oauthClient(connection, config, tokens);
-    await _commit(
-      connection,
-      ActiveConnection(
-        connection: connection,
-        client: client,
-        capabilities: capabilities,
-      ),
-    );
+    await _commit(connection, await _enrich(connection, client, capabilities));
   }
 
   Future<void> activate(String connectionId) async {
@@ -205,10 +203,35 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       );
     }
     final capabilities = await client.capabilities();
+    return _enrich(connection, client, capabilities);
+  }
+
+  /// Completes a session with optional per-instance context: styling and the
+  /// signed-in account. Both are decoration; failures degrade to defaults.
+  Future<ActiveConnection> _enrich(
+    Connection connection,
+    GttSyncClient client,
+    Capabilities capabilities,
+  ) async {
+    GttStyleSettings style = const GttStyleSettings();
+    CurrentUser? user;
+    try {
+      style = await client.styleSettings();
+    } on Exception catch (error) {
+      debugPrint('Style settings unavailable: $error');
+    }
+    try {
+      final fetched = await client.currentUser();
+      user = fetched.displayName.isEmpty ? null : fetched;
+    } on Exception catch (error) {
+      debugPrint('Current user unavailable: $error');
+    }
     return ActiveConnection(
       connection: connection,
       client: client,
       capabilities: capabilities,
+      styleSettings: style,
+      currentUser: user,
     );
   }
 

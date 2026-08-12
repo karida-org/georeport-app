@@ -10,7 +10,7 @@ void main() {
     final json =
         jsonDecode(File('test/fixtures/bundle.json').readAsStringSync())
             as Map<String, dynamic>;
-    final sources = bundleToSources(Bundle.fromJson(json));
+    final sources = bundleToSources(Bundle.fromJson(json).issues);
 
     expect(sources.points['features'] as List<dynamic>, hasLength(2));
     expect(sources.lines['features'] as List<dynamic>, hasLength(1));
@@ -81,7 +81,7 @@ void main() {
       },
     });
 
-    final sources = bundleToSources(bundle);
+    final sources = bundleToSources(bundle.issues);
     final feature =
         (sources.polygons['features'] as List<dynamic>).single
             as Map<String, dynamic>;
