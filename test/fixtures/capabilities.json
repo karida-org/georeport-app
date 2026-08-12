@@ -50,6 +50,54 @@
             "view_gtt_settings",
             "use_gtt_sync"
         ],
-        "client_id": "45ct-M4qYVK2aTmV4hSus4qx0Yw9JN6HSCPUmtY5RbA"
+        "client_id": "45ct-M4qYVK2aTmV4hSus4qx0Yw9JN6HSCPUmtY5RbA",
+        "clients": {
+            "desktop": {
+                "client_id": "45ct-M4qYVK2aTmV4hSus4qx0Yw9JN6HSCPUmtY5RbA",
+                "redirect_uris": [
+                    "http://127.0.0.1:7070/"
+                ],
+                "scopes": [
+                    "view_project",
+                    "search_project",
+                    "edit_project",
+                    "view_issues",
+                    "add_issues",
+                    "edit_issues",
+                    "delete_issues",
+                    "set_issues_private",
+                    "add_issue_notes",
+                    "edit_issue_notes",
+                    "edit_own_issue_notes",
+                    "view_private_notes",
+                    "set_notes_private",
+                    "view_gtt_settings",
+                    "use_gtt_sync"
+                ]
+            },
+            "mobile": {
+                "client_id": "iTpgfyVaBLelhzxk9tBy6cONCTWnWefFcC3O2mFnr4A",
+                "redirect_uris": [
+                    "georeport://oauth/callback"
+                ],
+                "scopes": [
+                    "view_project",
+                    "search_project",
+                    "edit_project",
+                    "view_issues",
+                    "add_issues",
+                    "edit_issues",
+                    "delete_issues",
+                    "set_issues_private",
+                    "add_issue_notes",
+                    "edit_issue_notes",
+                    "edit_own_issue_notes",
+                    "view_private_notes",
+                    "set_notes_private",
+                    "view_gtt_settings",
+                    "use_gtt_sync"
+                ]
+            }
+        }
     }
 }

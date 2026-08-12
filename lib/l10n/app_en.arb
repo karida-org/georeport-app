@@ -20,6 +20,31 @@
       }
     }
   },
+  "connectContinueButton": "Continue",
+  "connectServerSummary": "Redmine {version} with GTT Sync",
+  "@connectServerSummary": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "connectSignInButton": "Sign in with your account",
+  "connectUseApiKeyInstead": "Use an API key instead",
+  "connectSavedInstances": "Saved instances",
+  "connectAddInstance": "Add another instance",
+  "connectRemoveTooltip": "Remove",
+  "connectRemoveTitle": "Remove this instance?",
+  "connectRemoveMessage": "{label} and its sign-in details will be removed from this device.",
+  "@connectRemoveMessage": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "connectRemoveConfirm": "Remove",
+  "cancelButton": "Cancel",
   "issuesTitle": "Issues",
   "issuesListTab": "List",
   "issuesMapTab": "Map",

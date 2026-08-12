@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
-import '../connect/connection_provider.dart';
+import '../../connections/connection_manager.dart';
 import 'issue_providers.dart';
 import 'issues_list_view.dart';
 import 'issues_maplibre_view.dart';
@@ -30,7 +30,7 @@ class IssuesScreen extends ConsumerWidget {
               icon: const Icon(Icons.logout),
               tooltip: l10n.disconnectTooltip,
               onPressed: () {
-                ref.read(connectionProvider.notifier).disconnect();
+                ref.read(connectionManagerProvider.notifier).disconnect();
                 context.go('/');
               },
             ),

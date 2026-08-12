@@ -1,29 +1,29 @@
 import 'package:dio/dio.dart';
 
+import 'client_auth.dart';
 import 'models/bundle.dart';
 import 'models/capabilities.dart';
 import 'models/issue_document.dart';
 
 /// Thin HTTP client for the `redmine_gtt_sync` contract.
 ///
-/// One instance per connected Redmine instance. Authentication uses the
-/// Redmine API key header; OAuth arrives with the M1 onboarding work.
+/// One instance per connected Redmine instance. [auth] is either a Redmine
+/// API key or an OAuth token manager; omit it for the public capabilities
+/// probe.
 class GttSyncClient {
-  GttSyncClient({required String baseUrl, String? apiKey, Dio? dio})
+  GttSyncClient({required String baseUrl, ClientAuth? auth, Dio? dio})
     : _dio =
           dio ??
           Dio(
             BaseOptions(
               baseUrl: _normalize(baseUrl),
-              headers: {
-                if (apiKey != null && apiKey.isNotEmpty)
-                  'X-Redmine-API-Key': apiKey,
-                'Accept': 'application/json',
-              },
+              headers: {'Accept': 'application/json'},
               connectTimeout: const Duration(seconds: 15),
               receiveTimeout: const Duration(seconds: 30),
             ),
-          );
+          ) {
+    auth?.install(_dio);
+  }
 
   final Dio _dio;
 

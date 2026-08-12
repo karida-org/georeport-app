@@ -6,6 +6,7 @@ library;
 
 import 'dart:io';
 
+import 'package:georeport/src/api/client_auth.dart';
 import 'package:georeport/src/api/gtt_sync_client.dart';
 import 'package:georeport/src/api/models/geojson.dart';
 
@@ -17,7 +18,7 @@ Future<void> main(List<String> args) async {
   }
   final client = GttSyncClient(
     baseUrl: args[0],
-    apiKey: args.length > 1 ? args[1] : null,
+    auth: args.length > 1 ? ApiKeyAuth(args[1]) : null,
   );
 
   final capabilities = await client.capabilities();

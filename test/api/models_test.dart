@@ -29,6 +29,27 @@ void main() {
       expect(oauth!.authorizeUrl, endsWith('/oauth/authorize'));
       expect(oauth.scopes, contains('use_gtt_sync'));
       expect(oauth.clientId, isNotNull);
+
+      final mobile = oauth.mobileClient;
+      expect(mobile, isNotNull, reason: 'fixture advertises a mobile client');
+      expect(mobile!.clientId, isNotEmpty);
+      expect(mobile.redirectUris, contains('georeport://oauth/callback'));
+      expect(mobile.scopes, contains('use_gtt_sync'));
+    });
+
+    test('tolerates a probe without a clients map', () {
+      final capabilities = Capabilities.fromJson({
+        'plugin': 'redmine_gtt_sync',
+        'version': '0.5.0',
+        'redmine': {'version': '7.0.0'},
+        'capabilities': const <String, dynamic>{},
+        'oauth': {
+          'authorize_url': 'https://x/oauth/authorize',
+          'token_url': 'https://x/oauth/token',
+          'scopes': const <String>[],
+        },
+      });
+      expect(capabilities.oauth!.mobileClient, isNull);
     });
   });
 
