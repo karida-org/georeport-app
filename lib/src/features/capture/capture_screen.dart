@@ -337,26 +337,26 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       );
     }
 
+    // Watched once and shared by the body and the controls: two watches of
+    // the same provider in one build is duplicated subscription work.
+    final schemaState = ref.watch(projectSchemaProvider(projectId));
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.captureTitle)),
       body: Column(
         children: [
           CaptureStepHeader(step: _step),
           Expanded(
-            child: ref
-                .watch(projectSchemaProvider(projectId))
-                .when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(l10n.issuesLoadFailed('$error')),
-                    ),
-                  ),
-                  data: (schema) =>
-                      _buildStep(l10n, schema, projectId, projects),
+            child: schemaState.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(l10n.issuesLoadFailed('$error')),
                 ),
+              ),
+              data: (schema) => _buildStep(l10n, schema, projectId, projects),
+            ),
           ),
           if (_error != null)
             Padding(
@@ -366,12 +366,10 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
-          ref
-              .watch(projectSchemaProvider(projectId))
-              .maybeWhen(
-                data: (schema) => _controls(l10n, schema, projectId),
-                orElse: () => const SizedBox.shrink(),
-              ),
+          schemaState.maybeWhen(
+            data: (schema) => _controls(l10n, schema, projectId),
+            orElse: () => const SizedBox.shrink(),
+          ),
         ],
       ),
     );
@@ -566,9 +564,13 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           return;
         }
         final trackerId = _effectiveTrackerId(schema, projectId);
-        if (trackerId != null) {
-          _submit(schema, projectId, trackerId);
+        if (trackerId == null) {
+          // A project with no tracker cannot receive an issue; saying so
+          // beats a Create button that silently does nothing.
+          setState(() => _error = l10n.captureNoTrackers);
+          return;
         }
+        _submit(schema, projectId, trackerId);
       },
     );
   }

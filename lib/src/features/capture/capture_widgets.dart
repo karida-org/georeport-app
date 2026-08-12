@@ -47,23 +47,24 @@ class CapturePhotoStrip extends StatelessWidget {
                       cacheWidth: 192,
                     ),
                   ),
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.cancel, size: 20),
-                      tooltip: l10n.capturePhotoRemove(index + 1),
-                      color: Colors.white,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.black38,
-                        minimumSize: const Size(28, 28),
-                        padding: EdgeInsets.zero,
+                  // Read-only (the review step): no remove affordance at
+                  // all, rather than a greyed-out one over the photo.
+                  if (onRemove case final ValueChanged<int> remove)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: IconButton(
+                        icon: const Icon(Icons.cancel, size: 20),
+                        tooltip: l10n.capturePhotoRemove(index + 1),
+                        color: Colors.white,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.black38,
+                          minimumSize: const Size(28, 28),
+                          padding: EdgeInsets.zero,
+                        ),
+                        onPressed: () => remove(index),
                       ),
-                      onPressed: onRemove == null
-                          ? null
-                          : () => onRemove!(index),
                     ),
-                  ),
                 ],
               ),
             ),
