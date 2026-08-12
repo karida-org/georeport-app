@@ -154,5 +154,29 @@
   "connectRenameLabel": "名前",
   "connectReauthAction": "再サインイン",
   "connectNewApiKeyTitle": "新しいAPIキーを入力",
-  "saveButton": "保存"
+  "saveButton": "保存",
+  "issueStatusSheetTitle": "ステータスを「{status}」に変更",
+  "@issueStatusSheetTitle": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "issueNoteOptionalLabel": "コメント(任意)",
+  "issueUpdateSubmit": "更新",
+  "issueUpdated": "チケットを更新しました。",
+  "issueAddCommentButton": "コメントを追加",
+  "issueCommentLabel": "コメント",
+  "issueCommentSubmit": "コメントを投稿",
+  "issueCommentEmpty": "コメントを入力するか、写真を添付してください。",
+  "issueConflictBody": "他のユーザーがこのチケットを更新しました。最新の状態を読み込みましたので、内容を確認してからもう一度変更してください。",
+  "issueUpdateFailed": "チケットを更新できませんでした: {message}",
+  "@issueUpdateFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  }
 }

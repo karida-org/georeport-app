@@ -17,6 +17,7 @@ import 'detail/attachments_section.dart';
 import 'detail/custom_fields_section.dart';
 import 'detail/issue_map_snippet.dart';
 import 'detail/journals_section.dart';
+import 'detail/update_sheets.dart';
 import 'issue_providers.dart';
 
 class IssueDetailScreen extends ConsumerWidget {
@@ -191,12 +192,27 @@ class _IssueDetail extends ConsumerWidget {
             spacing: 8,
             runSpacing: 4,
             children: [
+              // The contract only lists transitions Redmine will accept, so
+              // every chip is a real one-tap action (with an optional note).
               for (final status in issue.editable.statusTransitions)
-                Chip(
+                ActionChip(
                   label: Text(status.name),
                   visualDensity: VisualDensity.compact,
+                  onPressed: () => showStatusUpdateSheet(
+                    context,
+                    issue: issue,
+                    target: status,
+                  ),
                 ),
             ],
+          ),
+        ],
+        if (issue.editable.canAddNotes) ...[
+          const Divider(height: 32),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.add_comment_outlined),
+            label: Text(l10n.issueAddCommentButton),
+            onPressed: () => showCommentSheet(context, issue: issue),
           ),
         ],
         if (issue.attachments.isNotEmpty) ...[

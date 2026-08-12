@@ -244,5 +244,29 @@
   "connectRenameLabel": "Name",
   "connectReauthAction": "Sign in again",
   "connectNewApiKeyTitle": "Enter the new API key",
-  "saveButton": "Save"
+  "saveButton": "Save",
+  "issueStatusSheetTitle": "Change status to {status}",
+  "@issueStatusSheetTitle": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "issueNoteOptionalLabel": "Comment (optional)",
+  "issueUpdateSubmit": "Update",
+  "issueUpdated": "Issue updated.",
+  "issueAddCommentButton": "Add comment",
+  "issueCommentLabel": "Comment",
+  "issueCommentSubmit": "Post comment",
+  "issueCommentEmpty": "Enter a comment or attach a photo.",
+  "issueConflictBody": "Someone else updated this issue in the meantime. The latest state was reloaded; please review it and apply your change again.",
+  "issueUpdateFailed": "Could not update the issue: {message}",
+  "@issueUpdateFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  }
 }

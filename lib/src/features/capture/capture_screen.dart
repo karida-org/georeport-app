@@ -14,22 +14,12 @@ import '../../capture/exif_location.dart';
 import '../../capture/issue_draft.dart';
 import '../../capture/queue/upload_queue.dart';
 import '../../connections/connection_manager.dart';
+import '../../media/mime.dart';
 import '../issues/issues_store.dart';
 import 'capture_defaults.dart';
 import 'capture_providers.dart';
 import 'custom_field_editor.dart';
 import 'location_picker_screen.dart';
-
-/// MIME types by photo file extension; unknown extensions send no type.
-const _mimeByExtension = {
-  'jpg': 'image/jpeg',
-  'jpeg': 'image/jpeg',
-  'png': 'image/png',
-  'gif': 'image/gif',
-  'webp': 'image/webp',
-  'heic': 'image/heic',
-  'heif': 'image/heif',
-};
 
 /// Where a draft location came from, shown as context under the coordinates.
 enum _LocationSource { manual, exif, device }
@@ -85,12 +75,11 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     for (final path in paths) {
       try {
         final name = path.split('/').last;
-        final extension = name.split('.').last.toLowerCase();
         photos.add(
           DraftPhoto(
             filename: name,
             bytes: await File(path).readAsBytes(),
-            contentType: _mimeByExtension[extension],
+            contentType: mimeForFilename(name),
           ),
         );
       } on Exception {
@@ -110,12 +99,11 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           : [await _picker.pickImage(source: source)].nonNulls.toList();
       final photos = <DraftPhoto>[];
       for (final image in images) {
-        final extension = image.name.split('.').last.toLowerCase();
         photos.add(
           DraftPhoto(
             filename: image.name,
             bytes: await image.readAsBytes(),
-            contentType: image.mimeType ?? _mimeByExtension[extension],
+            contentType: image.mimeType ?? mimeForFilename(image.name),
           ),
         );
       }
