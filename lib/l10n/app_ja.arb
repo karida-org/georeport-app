@@ -244,5 +244,11 @@
   "editIssueAdjustLocation": "位置を調整",
   "editIssueLocationChanged": "位置を調整しました",
   "editIssueSaved": "チケットを更新しました。",
-  "editIssueFailed": "変更を保存できませんでした: {message}"
+  "editIssueFailed": "変更を保存できませんでした: {message}",
+  "locationSharingHeading": "位置情報の共有",
+  "locationSharingToggle": "現在地を共有する",
+  "locationSharingExplainer": "現在地を送信し、近くにいる担当者に作業を割り当てられるようにします。保存されるのは最新の位置のみで、前の位置は上書きされます。閲覧できるのはチームの位置情報を見る権限がある人だけです。",
+  "locationSharingForegroundNote": "アプリを開いている間だけ共有されます。いつでもオフにできます。",
+  "locationSharingNotYetShared": "まだ共有していません。",
+  "locationSharingLastShared": "最終共有 {time}"
 }
