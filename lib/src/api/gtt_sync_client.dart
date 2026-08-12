@@ -121,7 +121,7 @@ class GttSyncClient implements IssueSubmitApi {
       // RequestOptions, and a single-subscription stream is already consumed
       // by then - the retry threw a StateError that the outbox recorded as a
       // permanent failure for an upload that would have succeeded.
-      data: Uint8List.fromList(bytes),
+      data: bytes is Uint8List ? bytes : Uint8List.fromList(bytes),
       options: Options(
         contentType: 'application/octet-stream',
         headers: {'Content-Length': bytes.length},
@@ -267,10 +267,19 @@ class GttSyncClient implements IssueSubmitApi {
   /// before persisting them: the change feed with a now-cursor returns an
   /// empty page, but only for a caller Redmine accepts.
   Future<void> validateAuth() async {
-    await _dio.get<Map<String, dynamic>>(
-      '/gtt_sync/changes',
-      queryParameters: {'since': DateTime.now().toUtc().toIso8601String()},
+    // Asks "who am I", not "does some endpoint answer". A contract endpoint
+    // can legitimately answer an ANONYMOUS caller with an empty payload -
+    // which made this check pass for a wrong or missing key. Redmine refuses
+    // /users/current.json outright when the credentials are not good, and a
+    // response without a user id means the same thing.
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/users/current.json',
     );
+    final user = response.data?['user'];
+    final id = user is Map<String, dynamic> ? user['id'] : null;
+    if (id is! num || id <= 0) {
+      throw StateError('These credentials were not accepted by the instance.');
+    }
   }
 
   /// Raw GTT styling settings (tracker icons, tile layers).
