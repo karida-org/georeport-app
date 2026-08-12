@@ -1,0 +1,25 @@
+App Store Additional Permission
+
+Additional permission under GNU GPL version 3 section 7
+
+As an additional permission under section 7 of the GNU General Public
+License version 3 ("GPLv3"), the copyright holders of Georeport grant you
+permission to convey to third parties, and distribute through application
+distribution platforms operated by third parties (including, without
+limitation, the Apple App Store and services with usage rules or other
+terms that restrict the rights granted by the GPLv3), verbatim or modified
+copies of Georeport in object code form, notwithstanding any platform
+terms that would otherwise conflict with the GPLv3, provided that:
+
+1. the complete corresponding source code remains available under the
+   GPLv3 (with this additional permission) as required by the GPLv3; and
+2. this additional permission is preserved in copies of the source code.
+
+This additional permission applies only to distribution through such
+platforms; in all other respects the GPLv3 continues to apply unchanged.
+If you convey a modified version, you may (per GPLv3 section 7) remove
+this additional permission from your version.
+
+By contributing to Georeport, you agree that your contributions are
+licensed under the GNU General Public License version 3 or (at your
+option) any later version, with this additional permission.
