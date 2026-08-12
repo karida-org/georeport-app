@@ -10,6 +10,7 @@ import 'models/changes_page.dart';
 import 'models/current_user.dart';
 import 'models/gtt_style_settings.dart';
 import 'models/issue_document.dart';
+import 'models/project_schema.dart';
 
 /// Thin HTTP client for the `redmine_gtt_sync` contract.
 ///
@@ -93,6 +94,54 @@ class GttSyncClient {
       '/users/current.json',
     );
     return CurrentUser.fromJson(response.data ?? const {});
+  }
+
+  /// Per-project editing schema for the current user.
+  Future<ProjectSchema> projectSchema(int projectId) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/gtt_sync/projects/$projectId/schema',
+    );
+    return ProjectSchema.fromJson(response.data ?? const {});
+  }
+
+  /// Redmine's two-step attachment flow, step one: upload the bytes, get a
+  /// token to reference on the issue write.
+  Future<String> uploadFile(List<int> bytes, String filename) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/uploads.json',
+      queryParameters: {'filename': filename},
+      data: Stream.fromIterable([bytes]),
+      options: Options(
+        contentType: 'application/octet-stream',
+        headers: {'Content-Length': bytes.length},
+      ),
+    );
+    final upload = response.data?['upload'];
+    final token = upload is Map<String, dynamic>
+        ? upload['token'] as String?
+        : null;
+    if (token == null || token.isEmpty) {
+      throw StateError('Upload returned no token');
+    }
+    return token;
+  }
+
+  /// Creates an issue through the stock Redmine REST API (the contract has
+  /// no write endpoints by design; workflow and permissions stay server-side)
+  /// and returns the new issue id.
+  Future<int> createIssue(Map<String, dynamic> payload) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/issues.json',
+      data: payload,
+    );
+    final issue = response.data?['issue'];
+    final id = issue is Map<String, dynamic>
+        ? (issue['id'] as num?)?.toInt()
+        : null;
+    if (id == null) {
+      throw StateError('Issue creation returned no id');
+    }
+    return id;
   }
 
   /// Authenticated binary fetch for same-instance assets (attachment

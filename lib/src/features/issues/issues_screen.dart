@@ -47,6 +47,11 @@ class IssuesScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => context.push('/capture'),
+          icon: const Icon(Icons.add_a_photo),
+          label: Text(l10n.captureTitle),
+        ),
         appBar: AppBar(
           title: Text(l10n.issuesTitle),
           actions: [

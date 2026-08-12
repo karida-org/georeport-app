@@ -54,6 +54,8 @@ class IssuesListView extends ConsumerWidget {
     final today = DateTime.now();
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
+      // Clearance for the extended FAB over the last row.
+      padding: const EdgeInsets.only(bottom: 96),
       itemCount: issues.length,
       separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {

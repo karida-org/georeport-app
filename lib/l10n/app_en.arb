@@ -91,5 +91,76 @@
       }
     }
   },
-  "issueJournalUnset": "(none)"
+  "issueJournalUnset": "(none)",
+  "captureTitle": "New issue",
+  "capturePhotoCamera": "Camera",
+  "capturePhotoGallery": "Gallery",
+  "captureNoLocation": "No location",
+  "captureNoLocationHint": "Attach a geotagged photo or choose a spot on the map.",
+  "captureLocationFromPhoto": "Suggested from the photo",
+  "captureLocationFromDevice": "Suggested from your current location",
+  "captureEditLocation": "Choose on the map",
+  "captureClearLocation": "Remove location",
+  "captureLocationTitle": "Choose location",
+  "captureUseThisLocation": "Use this location",
+  "captureUseCurrentLocation": "My location",
+  "captureTrackerLabel": "Type",
+  "captureSubjectLabel": "Subject",
+  "captureDescriptionLabel": "Description",
+  "captureMoreFields": "More fields",
+  "captureSubmitButton": "Create issue",
+  "captureSubjectRequired": "A subject is required.",
+  "captureFieldsRequired": "Required: {fields}",
+  "@captureFieldsRequired": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "captureCreated": "Issue #{id} created.",
+  "@captureCreated": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "captureNoTrackers": "No trackers are available in this project.",
+  "captureNoProjects": "No projects are available to report into.",
+  "captureSubmitFailed": "Could not create the issue: {message}",
+  "@captureSubmitFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "capturePhotoAddFailed": "Could not add the photo: {message}",
+  "@capturePhotoAddFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "capturePhotoRemove": "Remove photo {position}",
+  "@capturePhotoRemove": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      }
+    }
+  },
+  "captureFieldsNumeric": "Must be a number: {fields}",
+  "@captureFieldsNumeric": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "captureFieldNone": "None",
+  "captureLocationDenied": "Location permission was not granted.",
+  "captureLocationFailed": "Could not get your location."
 }
