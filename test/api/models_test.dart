@@ -120,6 +120,26 @@ void main() {
       expect(issue.journals, isNotEmpty);
       expect(issue.editable.fields, contains('subject'));
       expect(issue.editable.statusTransitions, isNotEmpty);
+
+      expect(issue.geometryJson, isNotNull);
+      expect(issue.customFields, isNotEmpty);
+      final severity = issue.customFields.firstWhere(
+        (field) => field.name == 'Severity',
+      );
+      expect(severity.values, ['High']);
+
+      final withDetails = issue.journals.lastWhere(
+        (journal) => journal.details.isNotEmpty,
+      );
+      final change = withDetails.details.first;
+      expect(change.name, 'subject');
+      expect(change.oldValue, isNotNull);
+      expect(change.newValue, contains('CONFIRMED'));
+
+      final photo = issue.attachments.firstWhere(
+        (attachment) => attachment.isImage,
+      );
+      expect(photo.thumbnailUrl, isNotNull);
     });
 
     test('treats absent keys as unset, not as errors', () {
