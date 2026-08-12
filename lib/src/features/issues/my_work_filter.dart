@@ -16,12 +16,14 @@ final myWorkFilterProvider =
 class MyWorkFilterNotifier extends Notifier<MyWorkFilter> {
   @override
   MyWorkFilter build() {
-    final user = ref
-        .watch(connectionManagerProvider)
-        .value
-        ?.active
-        ?.currentUser;
-    return user == null ? MyWorkFilter.all : MyWorkFilter.mine;
+    // Narrowed to the identity itself: unrelated connection-state changes
+    // (rename, token refresh) must not reset a filter the user picked.
+    final displayName = ref.watch(
+      connectionManagerProvider.select(
+        (state) => state.value?.active?.currentUser?.displayName,
+      ),
+    );
+    return displayName == null ? MyWorkFilter.all : MyWorkFilter.mine;
   }
 
   void select(MyWorkFilter filter) => state = filter;

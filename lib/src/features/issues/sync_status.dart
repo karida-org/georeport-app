@@ -12,6 +12,16 @@ class SyncStatus {
 
   /// False after a failed sync attempt, until one succeeds again.
   final bool healthy;
+
+  /// Value equality, so repeated failed polls do not renotify listeners.
+  @override
+  bool operator ==(Object other) =>
+      other is SyncStatus &&
+      other.lastSyncAt == lastSyncAt &&
+      other.healthy == healthy;
+
+  @override
+  int get hashCode => Object.hash(lastSyncAt, healthy);
 }
 
 /// Deliberately not autoDispose: the record outlives the issues store's

@@ -53,11 +53,15 @@ class AppShell extends ConsumerWidget {
           PopupMenuButton<_MenuAction>(
             icon: const Icon(Icons.menu),
             tooltip: l10n.navMenuTooltip,
-            onSelected: (action) {
+            onSelected: (action) async {
               switch (action) {
                 case _MenuAction.switchInstance:
-                  ref.read(connectionManagerProvider.notifier).disconnect();
-                  context.go('/');
+                  await ref
+                      .read(connectionManagerProvider.notifier)
+                      .disconnect();
+                  if (context.mounted) {
+                    context.go('/');
+                  }
               }
             },
             itemBuilder: (context) => [

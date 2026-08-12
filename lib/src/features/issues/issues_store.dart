@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models/bundle.dart';
@@ -73,15 +73,15 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
   static const autoRefreshInterval = Duration(minutes: 1);
 
   bool _refreshing = false;
-  bool _disposed = false;
 
   @override
   Future<IssuesState> build() async {
-    _disposed = false;
     final timer = Timer.periodic(autoRefreshInterval, (_) => _autoRefresh());
+    // Coming back to the app is the moment fresh data matters most.
+    final lifecycle = AppLifecycleListener(onResume: _autoRefresh);
     ref.onDispose(() {
-      _disposed = true;
       timer.cancel();
+      lifecycle.dispose();
     });
     // Back online: sync right away instead of waiting out the interval.
     ref.listen(isOnlineProvider, (wasOnline, online) {
@@ -93,7 +93,14 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
     // The cursor is taken before the bundle loads: the feed is at-least-once
     // and applied idempotently, so overlap is safe while a gap would not be.
     final cursor = DateTime.now().toUtc().toIso8601String();
-    final bundle = await client.bundle();
+    final Bundle bundle;
+    try {
+      bundle = await client.bundle();
+    } on Exception {
+      // The store surfaces AsyncError; the menu's status must agree.
+      _recordSync(healthy: false);
+      rethrow;
+    }
     _recordSync(healthy: true);
     return IssuesState(
       byId: {for (final issue in bundle.issues) issue.summary.id: issue},
@@ -126,6 +133,11 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
           break;
         }
       }
+      // The store can be torn down while a page is in flight (switching
+      // instances); its result is then nobody's business.
+      if (!ref.mounted) {
+        return;
+      }
       state = AsyncData(next);
       _recordSync(healthy: true);
     } on Exception {
@@ -137,16 +149,25 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
   /// The periodic poll: quiet by design — the shown data stays on failure,
   /// and the outcome lands in the sync status for the shell's menu. An
   /// offline device skips the attempt entirely (no battery spent on doomed
-  /// requests, and no scary failure state for an expected situation).
+  /// requests, and no scary failure state for an expected situation), as
+  /// does a backgrounded app.
   Future<void> _autoRefresh() async {
-    if (_refreshing || state.value == null || !ref.read(isOnlineProvider)) {
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (_refreshing ||
+        !ref.mounted ||
+        state.value == null ||
+        !ref.read(isOnlineProvider) ||
+        (lifecycle != null && lifecycle != AppLifecycleState.resumed)) {
       return;
     }
     _refreshing = true;
     try {
       await refresh();
-    } on Exception catch (error) {
-      debugPrint('Issues auto-refresh failed: $error');
+      // A fire-and-forget timer callback has nobody above it to catch, so
+      // Error must not escape either (an unhandled async error otherwise).
+      // ignore: avoid_catches_without_on_clauses
+    } catch (error, stack) {
+      debugPrint('Issues auto-refresh failed: $error\n$stack');
     } finally {
       _refreshing = false;
     }
@@ -154,10 +175,10 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
 
   /// Records into a foreign provider, which is not allowed synchronously
   /// during build; the microtask defers past initialization, and the
-  /// dispose guard covers a store torn down in the meantime.
+  /// mounted check covers a store torn down in the meantime.
   void _recordSync({required bool healthy}) {
     Future.microtask(() {
-      if (_disposed) {
+      if (!ref.mounted) {
         return;
       }
       final status = ref.read(syncStatusProvider.notifier);
