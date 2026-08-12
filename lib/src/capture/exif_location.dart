@@ -9,7 +9,10 @@ Future<LatLng?> exifLocationOf(Uint8List imageBytes) async {
   final Map<String, IfdTag> tags;
   try {
     tags = await readExifFromBytes(imageBytes);
-  } on Exception {
+    // Malformed EXIF can throw Errors (RangeError on truncated segments),
+    // not just Exceptions; a photo without usable EXIF is simply untagged.
+    // ignore: avoid_catches_without_on_clauses
+  } catch (_) {
     return null;
   }
   final latitude = _coordinate(
@@ -39,8 +42,11 @@ double? _coordinate(IfdTag? tag, String? ref, {required String negativeRef}) {
     return null;
   }
   final parts = values.ratios;
-  double toDouble(Ratio ratio) =>
-      ratio.denominator == 0 ? 0 : ratio.numerator / ratio.denominator;
+  // A zero denominator is corrupt data, not a zero coordinate.
+  if (parts.take(3).any((ratio) => ratio.denominator == 0)) {
+    return null;
+  }
+  double toDouble(Ratio ratio) => ratio.numerator / ratio.denominator;
   final degrees =
       toDouble(parts[0]) + toDouble(parts[1]) / 60 + toDouble(parts[2]) / 3600;
   final sign = (ref ?? '').trim().toUpperCase() == negativeRef ? -1.0 : 1.0;

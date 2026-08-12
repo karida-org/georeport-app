@@ -14,7 +14,12 @@ void main() {
   });
 
   test('returns null for an image without GPS tags', () async {
-    final bytes = File('web/icons/Icon-192.png').readAsBytesSync();
+    final bytes = File('test/fixtures/no_gps.jpg').readAsBytesSync();
     expect(await exifLocationOf(bytes), isNull);
+  });
+
+  test('returns null for truncated image data', () async {
+    final bytes = File('test/fixtures/geotagged.jpg').readAsBytesSync();
+    expect(await exifLocationOf(bytes.sublist(0, 64)), isNull);
   });
 }

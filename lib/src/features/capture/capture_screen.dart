@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,10 +8,22 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/project_schema.dart';
 import '../../capture/exif_location.dart';
 import '../../capture/issue_draft.dart';
+import '../../connections/connection_manager.dart';
 import '../issues/issues_store.dart';
 import 'capture_providers.dart';
 import 'custom_field_editor.dart';
 import 'location_picker_screen.dart';
+
+/// MIME types by photo file extension; unknown extensions send no type.
+const _mimeByExtension = {
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'png': 'image/png',
+  'gif': 'image/gif',
+  'webp': 'image/webp',
+  'heic': 'image/heic',
+  'heif': 'image/heif',
+};
 
 /// The capture flow: photos first, then a minimal schema-driven form.
 /// Required fields surface automatically; everything optional folds away.
@@ -47,24 +57,44 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   }
 
   Future<void> _addPhoto(ImageSource source) async {
-    final images = source == ImageSource.gallery
-        ? await _picker.pickMultiImage()
-        : [await _picker.pickImage(source: source)].nonNulls.toList();
-    for (final image in images) {
-      final bytes = await image.readAsBytes();
-      setState(() {
-        _photos.add(DraftPhoto(filename: image.name, bytes: bytes));
-      });
-      // First geotagged photo wins the location suggestion; the user can
-      // still adjust or clear it.
-      if (_location == null) {
-        final suggested = await exifLocationOf(Uint8List.fromList(bytes));
-        if (suggested != null && mounted) {
-          setState(() {
-            _location = suggested;
-            _locationFromExif = true;
-          });
+    final l10n = AppLocalizations.of(context);
+    try {
+      final images = source == ImageSource.gallery
+          ? await _picker.pickMultiImage()
+          : [await _picker.pickImage(source: source)].nonNulls.toList();
+      for (final image in images) {
+        final bytes = await image.readAsBytes();
+        final extension = image.name.split('.').last.toLowerCase();
+        if (!mounted) {
+          return;
         }
+        setState(() {
+          _photos.add(
+            DraftPhoto(
+              filename: image.name,
+              bytes: bytes,
+              contentType: image.mimeType ?? _mimeByExtension[extension],
+            ),
+          );
+        });
+        // First geotagged photo wins the location suggestion; the user can
+        // still adjust or clear it.
+        if (_location == null) {
+          final suggested = await exifLocationOf(bytes);
+          if (suggested != null && mounted) {
+            setState(() {
+              _location = suggested;
+              _locationFromExif = true;
+            });
+          }
+        }
+      }
+      // Camera unavailable, permission denied, unreadable file: platform
+      // exceptions here are user-visible situations, not programming errors.
+      // ignore: avoid_catches_without_on_clauses
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = l10n.capturePhotoAddFailed('$error'));
       }
     }
   }
@@ -76,7 +106,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         builder: (context) => LocationPickerScreen(initial: _location),
       ),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _location = picked;
         _locationFromExif = false;
@@ -84,18 +114,46 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     }
   }
 
-  Future<void> _submit(ProjectSchema schema) async {
+  Future<void> _submit(
+    ProjectSchema schema,
+    int projectId,
+    int trackerId,
+  ) async {
     final l10n = AppLocalizations.of(context);
-    final missing = [
-      for (final field in schema.fieldsForTracker(_trackerId!))
-        if (field.required && _customFieldValues[field.id] == null) field.name,
-    ];
+    final fields = schema
+        .fieldsForTracker(trackerId)
+        .where(
+          (field) => supportedCustomFieldFormats.contains(field.fieldFormat),
+        )
+        .toList();
     if (_subjectController.text.trim().isEmpty) {
       setState(() => _error = l10n.captureSubjectRequired);
       return;
     }
+    // A never-touched switch means "off", not "missing".
+    final values = {
+      for (final field in fields)
+        if (field.fieldFormat == 'bool' && field.required)
+          field.id: _customFieldValues[field.id] ?? '0',
+      ..._customFieldValues,
+    };
+    final missing = [
+      for (final field in fields)
+        if (field.required && values[field.id] == null) field.name,
+    ];
     if (missing.isNotEmpty) {
       setState(() => _error = l10n.captureFieldsRequired(missing.join(', ')));
+      return;
+    }
+    final notNumeric = [
+      for (final field in fields)
+        if ((field.fieldFormat == 'int' || field.fieldFormat == 'float') &&
+            values[field.id] is String &&
+            num.tryParse(values[field.id]! as String) == null)
+          field.name,
+    ];
+    if (notNumeric.isNotEmpty) {
+      setState(() => _error = l10n.captureFieldsNumeric(notNumeric.join(', ')));
       return;
     }
     setState(() {
@@ -104,17 +162,17 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     });
     try {
       final draft = IssueDraft(
-        projectId: _projectId!,
-        trackerId: _trackerId!,
+        projectId: projectId,
+        trackerId: trackerId,
         subject: _subjectController.text.trim(),
         description: _descriptionController.text.trim(),
         location: _location,
         photos: List.of(_photos),
-        customFieldValues: Map.of(_customFieldValues),
+        customFieldValues: values,
       );
       final issueId = await ref.read(submitDraftProvider)(draft);
-      ref.invalidate(issuesProvider);
       if (mounted) {
+        ref.invalidate(issuesProvider);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l10n.captureCreated(issueId))));
@@ -124,7 +182,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       // ignore: avoid_catches_without_on_clauses
     } catch (error) {
       if (mounted) {
-        setState(() => _error = '$error');
+        setState(() => _error = l10n.captureSubmitFailed('$error'));
       }
     } finally {
       if (mounted) {
@@ -136,15 +194,24 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Guard: this screen needs a session; state-driven like the rest of the
+    // navigation.
+    ref.listen(connectionManagerProvider, (previous, next) {
+      if (next.value != null && next.value!.active == null && mounted) {
+        context.go('/');
+      }
+    });
     final issues = ref.watch(issuesProvider).value;
     final projects = issues?.projects ?? const [];
-    _projectId ??= projects.isNotEmpty ? projects.first.id : null;
-    final projectId = _projectId;
+    // Effective selections: defaults are derived, never written during
+    // build; state only changes on explicit user action.
+    final projectId =
+        _projectId ?? (projects.isNotEmpty ? projects.first.id : null);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.captureTitle)),
       body: projectId == null
-          ? Center(child: Text(l10n.issuesEmpty))
+          ? Center(child: Text(l10n.captureNoProjects))
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -156,7 +223,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                   onGallery: _submitting
                       ? null
                       : () => _addPhoto(ImageSource.gallery),
-                  onRemove: (index) => setState(() => _photos.removeAt(index)),
+                  onRemove: _submitting
+                      ? null
+                      : (index) => setState(() => _photos.removeAt(index)),
                 ),
                 const SizedBox(height: 16),
                 _LocationCard(
@@ -206,7 +275,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                       ),
                       error: (error, _) =>
                           Text(l10n.issuesLoadFailed('$error')),
-                      data: (schema) => _buildForm(l10n, schema),
+                      data: (schema) => _buildForm(l10n, schema, projectId),
                     ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
@@ -222,13 +291,23 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     );
   }
 
-  Widget _buildForm(AppLocalizations l10n, ProjectSchema schema) {
-    _trackerId ??= schema.trackers.isNotEmpty ? schema.trackers.first.id : null;
-    final trackerId = _trackerId;
+  Widget _buildForm(
+    AppLocalizations l10n,
+    ProjectSchema schema,
+    int projectId,
+  ) {
+    final trackerId =
+        _trackerId ??
+        (schema.trackers.isNotEmpty ? schema.trackers.first.id : null);
     if (trackerId == null) {
       return Text(l10n.captureNoTrackers);
     }
-    final fields = schema.fieldsForTracker(trackerId);
+    final fields = schema
+        .fieldsForTracker(trackerId)
+        .where(
+          (field) => supportedCustomFieldFormats.contains(field.fieldFormat),
+        )
+        .toList();
     final required = fields.where((field) => field.required).toList();
     final optional = fields.where((field) => !field.required).toList();
     return Column(
@@ -273,6 +352,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         for (final field in required) ...[
           const SizedBox(height: 16),
           CustomFieldEditor(
+            // Keyed per field so text state never leaks across tracker
+            // switches when the element tree is otherwise identical.
+            key: ValueKey('cf-${field.id}'),
             field: field,
             value: _customFieldValues[field.id],
             onChanged: (value) => setState(() {
@@ -296,6 +378,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
             for (final field in optional) ...[
               const SizedBox(height: 16),
               CustomFieldEditor(
+                key: ValueKey('cf-${field.id}'),
                 field: field,
                 value: _customFieldValues[field.id],
                 onChanged: (value) => setState(() {
@@ -308,7 +391,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         ],
         const SizedBox(height: 24),
         FilledButton(
-          onPressed: _submitting ? null : () => _submit(schema),
+          onPressed: _submitting
+              ? null
+              : () => _submit(schema, projectId, trackerId),
           child: _submitting
               ? const SizedBox(
                   width: 20,
@@ -334,7 +419,7 @@ class _PhotoStrip extends StatelessWidget {
   final List<DraftPhoto> photos;
   final VoidCallback? onCamera;
   final VoidCallback? onGallery;
-  final ValueChanged<int> onRemove;
+  final ValueChanged<int>? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -354,10 +439,12 @@ class _PhotoStrip extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.memory(
-                      Uint8List.fromList(photos[index].bytes),
+                      photos[index].bytes,
                       width: 96,
                       height: 96,
                       fit: BoxFit.cover,
+                      // Thumbnails never need native resolution.
+                      cacheWidth: 192,
                     ),
                   ),
                   Positioned(
@@ -365,8 +452,16 @@ class _PhotoStrip extends StatelessWidget {
                     right: 0,
                     child: IconButton(
                       icon: const Icon(Icons.cancel, size: 20),
+                      tooltip: l10n.capturePhotoRemove(index + 1),
                       color: Colors.white,
-                      onPressed: () => onRemove(index),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black38,
+                        minimumSize: const Size(28, 28),
+                        padding: EdgeInsets.zero,
+                      ),
+                      onPressed: onRemove == null
+                          ? null
+                          : () => onRemove!(index),
                     ),
                   ),
                 ],

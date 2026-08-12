@@ -1,11 +1,20 @@
+import 'dart:typed_data';
+
 import 'package:latlong2/latlong.dart';
 
 /// One photo attached to a draft, kept as raw bytes until submission.
 class DraftPhoto {
-  const DraftPhoto({required this.filename, required this.bytes});
+  const DraftPhoto({
+    required this.filename,
+    required this.bytes,
+    this.contentType,
+  });
 
   final String filename;
-  final List<int> bytes;
+  final Uint8List bytes;
+
+  /// MIME type when known; omitted from the upload otherwise.
+  final String? contentType;
 }
 
 /// Everything a new issue needs, independent of any widget state, so

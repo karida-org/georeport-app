@@ -63,5 +63,13 @@
   "captureSubjectRequired": "題名は必須です。",
   "captureFieldsRequired": "必須項目: {fields}",
   "captureCreated": "チケット #{id} を作成しました。",
-  "captureNoTrackers": "このプロジェクトで使える種類がありません。"
+  "captureNoTrackers": "このプロジェクトで使える種類がありません。",
+  "captureNoProjects": "報告先にできるプロジェクトがありません。",
+  "captureSubmitFailed": "チケットを作成できませんでした: {message}",
+  "capturePhotoAddFailed": "写真を追加できませんでした: {message}",
+  "capturePhotoRemove": "写真 {position} を削除",
+  "captureFieldsNumeric": "数値で入力してください: {fields}",
+  "captureFieldNone": "なし",
+  "captureLocationDenied": "位置情報の利用が許可されていません。",
+  "captureLocationFailed": "現在地を取得できませんでした。"
 }

@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/project_schema.dart';
+
+/// The custom field formats the capture form can edit. Formats needing
+/// id-based reference pickers (user, version) are excluded until supported;
+/// the server rejects an issue missing a required one, which surfaces as a
+/// submit error rather than a silently wrong value.
+const supportedCustomFieldFormats = {
+  'string',
+  'text',
+  'list',
+  'bool',
+  'date',
+  'int',
+  'float',
+};
 
 /// One editor per custom field format, driven entirely by the schema. The
 /// value contract matches Redmine's API: strings (bool as '1'/'0', dates as
-/// ISO), or a list of strings for multi-value fields.
+/// ISO), or a list of strings for multi-value fields. Every format can also
+/// clear its value again (null), so optional fields never get stuck.
 class CustomFieldEditor extends StatelessWidget {
   const CustomFieldEditor({
     required this.field,
@@ -20,6 +36,7 @@ class CustomFieldEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final label = field.required ? '${field.name} *' : field.name;
     switch (field.fieldFormat) {
       case 'list' when field.multiple:
@@ -49,13 +66,15 @@ class CustomFieldEditor extends StatelessWidget {
           ),
         );
       case 'list':
-        return DropdownButtonFormField<String>(
+        return DropdownButtonFormField<String?>(
           initialValue: value as String?,
           decoration: InputDecoration(
             labelText: label,
             border: const OutlineInputBorder(),
           ),
           items: [
+            if (!field.required)
+              DropdownMenuItem(value: null, child: Text(l10n.captureFieldNone)),
             for (final option in field.possibleValues)
               DropdownMenuItem(value: option, child: Text(option)),
           ],
@@ -72,6 +91,7 @@ class CustomFieldEditor extends StatelessWidget {
         return _DateField(
           label: label,
           value: value as String?,
+          clearable: !field.required,
           onChanged: onChanged,
         );
       case 'int' || 'float':
@@ -102,15 +122,18 @@ class _DateField extends StatelessWidget {
   const _DateField({
     required this.label,
     required this.value,
+    required this.clearable,
     required this.onChanged,
   });
 
   final String label;
   final String? value;
+  final bool clearable;
   final ValueChanged<Object?> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
     final parsed = value == null ? null : DateTime.tryParse(value!);
     return InkWell(
@@ -133,7 +156,13 @@ class _DateField extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
-          suffixIcon: const Icon(Icons.calendar_today),
+          suffixIcon: clearable && parsed != null
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  tooltip: l10n.captureFieldNone,
+                  onPressed: () => onChanged(null),
+                )
+              : const Icon(Icons.calendar_today),
         ),
         child: Text(
           parsed == null ? '' : DateFormat.yMMMd(locale).format(parsed),

@@ -47,7 +47,8 @@ class _IssuesMapLibreViewState extends State<IssuesMapLibreView> {
       onMapCreated: (controller) => _controller = controller,
       onStyleLoaded: _onStyleLoaded,
       onEvent: _onEvent,
-      children: const [SourceAttribution()],
+      // Bottom-left keeps the attribution clear of the FAB.
+      children: const [SourceAttribution(alignment: Alignment.bottomLeft)],
     );
     if (!kDebugMode) {
       return map;
@@ -57,7 +58,7 @@ class _IssuesMapLibreViewState extends State<IssuesMapLibreView> {
         map,
         Positioned(
           left: 8,
-          bottom: 8,
+          bottom: 48,
           child: IconButton.filledTonal(
             icon: const Icon(Icons.download_for_offline),
             tooltip: 'Dev: download an offline region for evaluation',

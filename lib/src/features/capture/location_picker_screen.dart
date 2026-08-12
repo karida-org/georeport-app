@@ -11,7 +11,10 @@ const _styleUrl = String.fromEnvironment(
 );
 
 /// Full-screen location chooser: the pin stays centered, the map moves under
-/// it. Returns the chosen position, or null when dismissed.
+/// it. Returns the chosen position, or null when dismissed. Confirmation
+/// unlocks only once there is a deliberate position: an initial suggestion,
+/// a pan, or a located fix; a user who never moved the world-view map cannot
+/// accidentally submit its arbitrary center.
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({this.initial, super.key});
 
@@ -24,11 +27,13 @@ class LocationPickerScreen extends StatefulWidget {
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
   MapController? _controller;
   bool _locating = false;
+  late bool _positioned = widget.initial != null;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final initial = widget.initial;
+    final ready = _controller != null && _positioned;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.captureLocationTitle)),
       body: Stack(
@@ -42,10 +47,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               ),
               initZoom: initial == null ? 3 : 16,
             ),
-            onMapCreated: (controller) => _controller = controller,
+            onMapCreated: (controller) =>
+                setState(() => _controller = controller),
+            onEvent: (event) {
+              if (event is MapEventUserInput && !_positioned) {
+                setState(() => _positioned = true);
+              }
+            },
             children: const [SourceAttribution()],
           ),
-          // The fixed crosshair pin; its tip points at the map center.
           const IgnorePointer(
             child: Center(
               child: Padding(
@@ -66,7 +76,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     )
                   : const Icon(Icons.my_location),
               tooltip: l10n.captureUseCurrentLocation,
-              onPressed: _locating ? null : _moveToCurrentLocation,
+              onPressed: _locating || _controller == null
+                  ? null
+                  : _moveToCurrentLocation,
             ),
           ),
         ],
@@ -75,19 +87,21 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: FilledButton(
-            onPressed: () {
-              final camera = _controller?.getCamera();
-              if (camera == null) {
-                return;
-              }
-              Navigator.pop(
-                context,
-                LatLng(
-                  camera.center.lat.toDouble(),
-                  camera.center.lon.toDouble(),
-                ),
-              );
-            },
+            onPressed: !ready
+                ? null
+                : () {
+                    final camera = _controller?.getCamera();
+                    if (camera == null) {
+                      return;
+                    }
+                    Navigator.pop(
+                      context,
+                      LatLng(
+                        camera.center.lat.toDouble(),
+                        camera.center.lon.toDouble(),
+                      ),
+                    );
+                  },
             child: Text(l10n.captureUseThisLocation),
           ),
         ),
@@ -96,6 +110,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Future<void> _moveToCurrentLocation() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _locating = true);
     try {
       var permission = await Geolocator.checkPermission();
@@ -104,15 +120,27 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.captureLocationDenied)),
+        );
         return;
       }
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          timeLimit: Duration(seconds: 15),
+        ),
+      );
       await _controller?.moveCamera(
         center: Geographic(lon: position.longitude, lat: position.latitude),
         zoom: 16,
       );
+      if (mounted && !_positioned) {
+        setState(() => _positioned = true);
+      }
     } on Exception {
-      // Location is a convenience; the user can still pan manually.
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.captureLocationFailed)),
+      );
     } finally {
       if (mounted) {
         setState(() => _locating = false);

@@ -125,5 +125,41 @@
       }
     }
   },
-  "captureNoTrackers": "No trackers are available in this project."
+  "captureNoTrackers": "No trackers are available in this project.",
+  "captureNoProjects": "No projects are available to report into.",
+  "captureSubmitFailed": "Could not create the issue: {message}",
+  "@captureSubmitFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "capturePhotoAddFailed": "Could not add the photo: {message}",
+  "@capturePhotoAddFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "capturePhotoRemove": "Remove photo {position}",
+  "@capturePhotoRemove": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      }
+    }
+  },
+  "captureFieldsNumeric": "Must be a number: {fields}",
+  "@captureFieldsNumeric": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "captureFieldNone": "None",
+  "captureLocationDenied": "Location permission was not granted.",
+  "captureLocationFailed": "Could not get your location."
 }

@@ -22,7 +22,7 @@ final submitDraftProvider = Provider.autoDispose(
       uploads.add({
         'token': token,
         'filename': photo.filename,
-        'content_type': 'image/jpeg',
+        if (photo.contentType case final String type) 'content_type': type,
       });
     }
     return client.createIssue(draft.toPayload(uploads));
