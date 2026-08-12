@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/generated/app_localizations.dart';
+import 'features/location/location_sharing.dart';
 import 'router.dart';
 import 'share/share_intake.dart';
 import 'theme.dart';
@@ -22,6 +23,8 @@ class GeoreportApp extends ConsumerWidget {
     // Mirrors running timers into the ongoing notification for the whole
     // app lifetime; a void provider, so this never rebuilds anything.
     ref.watch(timerNotificationSyncProvider);
+    // Publishes the location while sharing is on and the app is in use.
+    ref.watch(locationSharingProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       locale: locale,

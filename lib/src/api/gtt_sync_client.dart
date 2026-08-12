@@ -189,6 +189,21 @@ class GttSyncClient implements IssueSubmitApi {
     await _dio.put<void>('/issues/$issueId.json', data: payload);
   }
 
+  /// Publishes the signed-in user's current location. The server always
+  /// writes the caller's own point (there is no id in the path), keeping
+  /// only the latest one, so nothing resembling a track is ever stored.
+  Future<void> publishLocation(double latitude, double longitude) async {
+    await _dio.post<void>(
+      '/gtt_sync/users/me/location',
+      data: {
+        'location': {
+          'type': 'Point',
+          'coordinates': [longitude, latitude],
+        },
+      },
+    );
+  }
+
   /// Logs time on an issue through the contract; runs as the authenticated
   /// user. Returns the created entry. A 422 carries the server's validation
   /// messages in the DioException response.

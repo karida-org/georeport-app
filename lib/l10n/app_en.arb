@@ -386,5 +386,18 @@
         "type": "String"
       }
     }
+  },
+  "locationSharingHeading": "Location sharing",
+  "locationSharingToggle": "Share my location",
+  "locationSharingExplainer": "Publishes where you are now, so colleagues can assign work to whoever is nearby. Only your latest position is stored, replacing the previous one, and only people allowed to see team locations can read it.",
+  "locationSharingForegroundNote": "Shared while the app is open. Turn it off any time.",
+  "locationSharingNotYetShared": "Not shared yet.",
+  "locationSharingLastShared": "Last shared at {time}",
+  "@locationSharingLastShared": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   }
 }

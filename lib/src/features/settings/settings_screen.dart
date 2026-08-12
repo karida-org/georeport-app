@@ -7,6 +7,7 @@ import '../../capture/queue/upload_queue.dart';
 import 'about_section.dart';
 import 'capture_defaults_section.dart';
 import 'connection_section.dart';
+import 'location_sharing_section.dart';
 import 'permissions_section.dart';
 import 'settings_widgets.dart';
 
@@ -26,6 +27,7 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           const PermissionsSection(),
           const ConnectionSection(),
+          const LocationSharingSection(),
           const CaptureDefaultsSection(),
           SettingsSection(
             title: l10n.outboxTitle,

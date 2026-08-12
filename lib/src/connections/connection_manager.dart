@@ -14,6 +14,7 @@ import '../auth/oauth_flow.dart';
 import '../auth/oauth_tokens.dart';
 import '../auth/token_manager.dart';
 import '../features/issues/issues_cache.dart';
+import '../features/location/location_sharing.dart';
 import 'connection.dart';
 import 'connection_meta_cache.dart';
 import 'connection_store.dart';
@@ -263,6 +264,7 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     await _revokeBestEffort(connectionId);
     await _store.deleteSecret(connectionId);
     await ref.read(scopeDriftDismissalsProvider).clear(connectionId);
+    await ref.read(locationSharingPreferenceProvider).clear(connectionId);
     // Forgetting an instance forgets its cached data too.
     await (await _metaCache()).clear(connectionId);
     try {
