@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +13,7 @@ import '../auth/oauth_config.dart';
 import '../auth/oauth_flow.dart';
 import '../auth/oauth_tokens.dart';
 import '../auth/token_manager.dart';
+import '../features/issues/issues_cache.dart';
 import 'connection.dart';
 import 'connection_meta_cache.dart';
 import 'connection_store.dart';
@@ -268,10 +267,7 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     await (await _metaCache()).clear(connectionId);
     try {
       final documents = await getApplicationDocumentsDirectory();
-      final issues = File('${documents.path}/issues-$connectionId.json');
-      if (await issues.exists()) {
-        await issues.delete();
-      }
+      await IssuesCache(IssuesCache.fileFor(documents, connectionId)).clear();
     } on Exception catch (error) {
       debugPrint('Issues cache cleanup failed (ignored): $error');
     }
@@ -385,16 +381,22 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       debugPrint('Current user unavailable: $error');
     }
     // The offline-resume snapshot; failures are ignored because a session
-    // that cannot be cached is still a working session.
-    try {
-      await (await _metaCache()).save(
-        connection.id,
-        capabilities: capabilities,
-        styleSettings: style,
-        currentUser: user,
-      );
-    } on Exception catch (error) {
-      debugPrint('Connection meta cache write failed (ignored): $error');
+    // that cannot be cached is still a working session. An activation can
+    // race a removal, so a connection that vanished from the saved list is
+    // not re-cached (an empty state means the initial build, where no
+    // removal can be running yet).
+    final saved = state.value?.connections;
+    if (saved == null || saved.any((c) => c.id == connection.id)) {
+      try {
+        await (await _metaCache()).save(
+          connection.id,
+          capabilities: capabilities,
+          styleSettings: style,
+          currentUser: user,
+        );
+      } on Exception catch (error) {
+        debugPrint('Connection meta cache write failed (ignored): $error');
+      }
     }
     return ActiveConnection(
       connection: connection,

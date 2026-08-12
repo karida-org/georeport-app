@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../../api/models/bundle.dart';
 import '../../api/models/geojson.dart';
 import '../../api/models/issue_summary.dart';
-import 'issues_store.dart';
+import 'issues_state.dart';
 
 /// What a cache load brings back: the state to show immediately, plus when
 /// it was last known good (restored into the sync status).
@@ -70,9 +70,11 @@ class IssuesCache {
         state: state,
         syncedAt: DateTime.tryParse(json['synced_at'] as String? ?? ''),
       );
-    } on Exception catch (error) {
-      // A corrupt cache is not worth failing a launch over; the online
-      // path rebuilds it from a fresh bundle.
+      // A corrupt cache is not worth failing a launch over; the online path
+      // rebuilds it from a fresh bundle. Catch-all on purpose: a malformed
+      // shape throws TypeError (an Error, not an Exception) from the casts.
+      // ignore: avoid_catches_without_on_clauses
+    } catch (error) {
       debugPrint('Issues cache unreadable, ignoring: $error');
       return null;
     }
@@ -97,9 +99,18 @@ class IssuesCache {
     await sidecar.rename(_file.path);
   }
 
+  /// Removes the cache and any leftover sidecar from an interrupted write:
+  /// forgetting must leave no cached data behind.
   Future<void> clear() async {
-    if (await _file.exists()) {
-      await _file.delete();
+    for (final file in [_file, File('${_file.path}.tmp')]) {
+      if (await file.exists()) {
+        await file.delete();
+      }
     }
   }
+
+  /// The file the cache uses for a connection; shared with the connection
+  /// manager's forget-cleanup so the two can never disagree on the path.
+  static File fileFor(Directory documents, String connectionId) =>
+      File('${documents.path}/issues-$connectionId.json');
 }

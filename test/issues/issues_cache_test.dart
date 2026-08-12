@@ -5,7 +5,7 @@ import 'package:georeport/src/api/models/bundle.dart';
 import 'package:georeport/src/api/models/geojson.dart';
 import 'package:georeport/src/api/models/issue_summary.dart';
 import 'package:georeport/src/features/issues/issues_cache.dart';
-import 'package:georeport/src/features/issues/issues_store.dart';
+import 'package:georeport/src/features/issues/issues_state.dart';
 
 void main() {
   late Directory temp;
@@ -92,9 +92,26 @@ void main() {
     expect(await cache.load(), isNull);
   });
 
-  test('clear removes the file', () async {
+  test(
+    'a malformed shape (valid JSON, wrong types) also loads as null',
+    () async {
+      // Casts throw TypeError, which is an Error, not an Exception; the
+      // loader must swallow it all the same.
+      await File(
+        '${temp.path}/issues.json',
+      ).writeAsString('{"version": 1, "cursor": "x", "issues": {"not": 1}}');
+      expect(await cache.load(), isNull);
+    },
+  );
+
+  test('clear removes the file and a leftover write sidecar', () async {
     await cache.save(sampleState(), syncedAt: DateTime.now());
+    final sidecar = File('${temp.path}/issues.json.tmp');
+    await sidecar.writeAsString('interrupted write');
+
     await cache.clear();
+
     expect(await cache.load(), isNull);
+    expect(await sidecar.exists(), isFalse);
   });
 }

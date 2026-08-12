@@ -49,7 +49,9 @@ class ConnectionMetaCache {
         'version': _version,
         'capabilities': capabilities.raw,
         'style': styleSettings.raw,
-        if (currentUser != null) 'user': currentUser.raw,
+        // A fallback identity (empty raw payload) is not worth caching.
+        if (currentUser != null && currentUser.raw.isNotEmpty)
+          'user': currentUser.raw,
       }),
       flush: true,
     );
@@ -73,26 +75,39 @@ class ConnectionMetaCache {
       }
       final style = json['style'];
       final user = json['user'];
+      final parsedUser = user is Map<String, dynamic>
+          ? CurrentUser.fromJson(user)
+          : null;
       return ConnectionMeta(
         capabilities: Capabilities.fromJson(capabilities),
         styleSettings: style is Map<String, dynamic>
             ? GttStyleSettings.fromJson(style)
             : const GttStyleSettings(),
-        currentUser: user is Map<String, dynamic>
-            ? CurrentUser.fromJson(user)
-            : null,
+        // The parser's fallback (no usable identity) reads as no user, the
+        // same rule the live activation applies.
+        currentUser: (parsedUser?.displayName.isEmpty ?? true)
+            ? null
+            : parsedUser,
       );
-    } on Exception catch (error) {
+      // Catch-all on purpose: malformed shapes throw TypeError (an Error,
+      // not an Exception) from the casts, and a corrupt cache must read as
+      // absent instead of failing the resume.
+      // ignore: avoid_catches_without_on_clauses
+    } catch (error) {
       debugPrint('Connection meta cache unreadable, ignoring: $error');
       return null;
     }
   }
 
+  /// Removes the snapshot and any leftover sidecar from an interrupted
+  /// write: forgetting must leave no session metadata behind.
   Future<void> clear(String connectionId) async {
     try {
       final file = _file(connectionId);
-      if (await file.exists()) {
-        await file.delete();
+      for (final target in [file, File('${file.path}.tmp')]) {
+        if (await target.exists()) {
+          await target.delete();
+        }
       }
     } on Exception catch (error) {
       debugPrint('Connection meta cache cleanup failed (ignored): $error');

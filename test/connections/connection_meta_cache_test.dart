@@ -42,15 +42,43 @@ void main() {
       expect(await cache.load('other'), isNull);
     });
 
-    test('clear forgets the snapshot', () async {
+    test('clear forgets the snapshot and a leftover write sidecar', () async {
       await cache.save(
         'c1',
         capabilities: Capabilities.fromJson(const {'plugin': 'x'}),
         styleSettings: const GttStyleSettings(),
       );
+      final sidecar = File('${temp.path}/connection-meta-c1.json.tmp');
+      await sidecar.writeAsString('interrupted write');
+
       await cache.clear('c1');
+
       expect(await cache.load('c1'), isNull);
+      expect(await sidecar.exists(), isFalse);
     });
+
+    test('a fallback identity is neither persisted nor resurrected', () async {
+      await cache.save(
+        'c1',
+        capabilities: Capabilities.fromJson(const {'plugin': 'x'}),
+        styleSettings: const GttStyleSettings(),
+        // The parser fallback: no usable identity, empty raw payload.
+        currentUser: CurrentUser.fromJson(const {}),
+      );
+      final meta = await cache.load('c1');
+      expect(meta, isNotNull);
+      expect(meta!.currentUser, isNull);
+    });
+
+    test(
+      'a malformed shape loads as null instead of failing the resume',
+      () async {
+        await File(
+          '${temp.path}/connection-meta-c1.json',
+        ).writeAsString('{"version": 1, "capabilities": [1, 2]}');
+        expect(await cache.load('c1'), isNull);
+      },
+    );
   });
 
   group('isUnreachableError', () {
