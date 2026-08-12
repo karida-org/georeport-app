@@ -197,5 +197,8 @@
   },
   "todayNavigateTooltip": "ここへナビ",
   "todayNavigateFailed": "地図アプリを開けませんでした。",
-  "myWorkFilterToday": "今日"
+  "myWorkFilterToday": "今日",
+  "scopeDriftTitle": "新しい権限が利用できます",
+  "scopeDriftBody": "このサーバーでは、現在のサインインに含まれていない権限が提供されています。再度サインインすると有効になります。",
+  "scopeDriftNotNow": "今はしない"
 }

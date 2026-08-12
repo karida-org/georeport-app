@@ -14,6 +14,7 @@ import '../auth/oauth_tokens.dart';
 import '../auth/token_manager.dart';
 import 'connection.dart';
 import 'connection_store.dart';
+import 'scope_drift.dart';
 
 /// The live, authenticated session for one saved connection.
 class ActiveConnection {
@@ -23,6 +24,7 @@ class ActiveConnection {
     required this.capabilities,
     this.styleSettings = const GttStyleSettings(),
     this.currentUser,
+    this.newScopes = const [],
   });
 
   final Connection connection;
@@ -36,6 +38,11 @@ class ActiveConnection {
   /// The signed-in account, when the token or role allows reading it; null
   /// hides identity-scoped features such as "assigned to me".
   final CurrentUser? currentUser;
+
+  /// Scopes the server advertises beyond what this session's OAuth grant
+  /// carries; non-empty invites a re-authorization (see [newlyAdvertisedScopes]).
+  /// Always empty for API-key sessions.
+  final List<String> newScopes;
 }
 
 /// What the UI observes: the saved list and the currently active session.
@@ -120,7 +127,10 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
         'This instance does not offer app sign-in.',
       );
     }
-    final tokens = await ref.read(oauthFlowProvider).authorize(config);
+    final tokens = _withRequestedScopes(
+      await ref.read(oauthFlowProvider).authorize(config),
+      config,
+    );
     final connection = _newConnection(normalized, ConnectionAuthKind.oauth);
     await _persistOAuthSecret(connection.id, config, tokens);
     final client = _oauthClient(connection, config, tokens);
@@ -202,7 +212,10 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
         'This instance does not offer app sign-in.',
       );
     }
-    final tokens = await ref.read(oauthFlowProvider).authorize(config);
+    final tokens = _withRequestedScopes(
+      await ref.read(oauthFlowProvider).authorize(config),
+      config,
+    );
     // The browser flow takes long enough for a concurrent removal; never
     // write credentials for a connection that no longer exists.
     if (_saved(connectionId) == null) {
@@ -245,6 +258,7 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     }
     await _revokeBestEffort(connectionId);
     await _store.deleteSecret(connectionId);
+    await ref.read(scopeDriftDismissalsProvider).clear(connectionId);
     final remaining = current.connections
         .where((Connection c) => c.id != connectionId)
         .toList();
@@ -273,6 +287,7 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       throw StateError('No stored credentials for ${connection.label}');
     }
     final GttSyncClient client;
+    List<String> grantedScopes = const [];
     if (secret['kind'] == 'oauth') {
       final config = OAuthConfig(
         authorizeUrl: '',
@@ -284,6 +299,7 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       final tokens = OAuthTokens.fromJson(
         secret['tokens'] as Map<String, dynamic>? ?? const {},
       );
+      grantedScopes = tokens.scopes;
       client = _oauthClient(connection, config, tokens);
     } else {
       final apiKey = secret['api_key'];
@@ -296,7 +312,15 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       );
     }
     final capabilities = await client.capabilities();
-    return _enrich(connection, client, capabilities);
+    return _enrich(
+      connection,
+      client,
+      capabilities,
+      newScopes: newlyAdvertisedScopes(
+        granted: grantedScopes,
+        advertised: capabilities.oauth?.mobileClient?.scopes ?? const [],
+      ),
+    );
   }
 
   /// Completes a session with optional per-instance context: styling and the
@@ -304,8 +328,9 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
   Future<ActiveConnection> _enrich(
     Connection connection,
     GttSyncClient client,
-    Capabilities capabilities,
-  ) async {
+    Capabilities capabilities, {
+    List<String> newScopes = const [],
+  }) async {
     GttStyleSettings style = const GttStyleSettings();
     CurrentUser? user;
     try {
@@ -325,6 +350,21 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       capabilities: capabilities,
       styleSettings: style,
       currentUser: user,
+      newScopes: newScopes,
+    );
+  }
+
+  /// Doorkeeper reports the granted scopes on the token response; a server
+  /// that omits the field granted exactly what was requested (RFC 6749).
+  OAuthTokens _withRequestedScopes(OAuthTokens tokens, OAuthConfig config) {
+    if (tokens.scopes.isNotEmpty) {
+      return tokens;
+    }
+    return OAuthTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt: tokens.expiresAt,
+      scopes: config.scopes,
     );
   }
 

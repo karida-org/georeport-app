@@ -287,5 +287,8 @@
   },
   "todayNavigateTooltip": "Navigate there",
   "todayNavigateFailed": "Could not open the maps app.",
-  "myWorkFilterToday": "Today"
+  "myWorkFilterToday": "Today",
+  "scopeDriftTitle": "New permissions available",
+  "scopeDriftBody": "This server offers permissions your sign-in does not include yet. Sign in again to enable them.",
+  "scopeDriftNotNow": "Not now"
 }
