@@ -9,6 +9,7 @@ import '../../api/models/project_schema.dart';
 import '../../capture/device_location.dart';
 import '../../capture/exif_location.dart';
 import '../../capture/issue_draft.dart';
+import '../../capture/queue/upload_queue.dart';
 import '../../connections/connection_manager.dart';
 import '../issues/issues_store.dart';
 import 'capture_defaults.dart';
@@ -226,18 +227,29 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         customFieldValues: values,
       );
       final defaults = ref.read(captureDefaultsProvider);
-      final issueId = await ref.read(submitDraftProvider)(draft);
+      // The queue persists the draft before trying, so from here on nothing
+      // the user entered can be lost, online or not.
+      final issueId = await ref
+          .read(uploadQueueProvider.notifier)
+          .submit(draft);
       // Next capture starts from what was just used.
       await defaults.remember(projectId: projectId, trackerId: trackerId);
       if (mounted) {
         ref
           ..invalidate(lastProjectProvider)
-          ..invalidate(lastTrackerProvider(projectId))
-          ..invalidate(issuesProvider);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.captureCreated(issueId))));
-        context.go('/issues/$issueId');
+          ..invalidate(lastTrackerProvider(projectId));
+        final messenger = ScaffoldMessenger.of(context);
+        if (issueId != null) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.captureCreated(issueId))),
+          );
+          context.go('/issues/$issueId');
+        } else {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.captureQueuedOffline)),
+          );
+          context.go('/issues');
+        }
       }
       // The draft survives any failure; only success leaves the screen.
       // ignore: avoid_catches_without_on_clauses

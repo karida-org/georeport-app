@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import 'base_url.dart';
 import 'client_auth.dart';
+import 'issue_submit_api.dart';
 import 'models/bundle.dart';
 import 'models/capabilities.dart';
 import 'models/changes_page.dart';
@@ -17,7 +18,7 @@ import 'models/project_schema.dart';
 /// One instance per connected Redmine instance. [auth] is either a Redmine
 /// API key or an OAuth token manager; omit it for the public capabilities
 /// probe.
-class GttSyncClient {
+class GttSyncClient implements IssueSubmitApi {
   GttSyncClient({required String baseUrl, ClientAuth? auth, Dio? dio})
     : _dio =
           dio ??
@@ -97,15 +98,20 @@ class GttSyncClient {
   }
 
   /// Per-project editing schema for the current user.
-  Future<ProjectSchema> projectSchema(int projectId) async {
+  Future<ProjectSchema> projectSchema(int projectId) async =>
+      ProjectSchema.fromJson(await projectSchemaJson(projectId));
+
+  /// The raw schema document, exposed for the offline schema cache.
+  Future<Map<String, dynamic>> projectSchemaJson(int projectId) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/gtt_sync/projects/$projectId/schema',
     );
-    return ProjectSchema.fromJson(response.data ?? const {});
+    return response.data ?? const {};
   }
 
   /// Redmine's two-step attachment flow, step one: upload the bytes, get a
   /// token to reference on the issue write.
+  @override
   Future<String> uploadFile(List<int> bytes, String filename) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/uploads.json',
@@ -129,6 +135,7 @@ class GttSyncClient {
   /// Creates an issue through the stock Redmine REST API (the contract has
   /// no write endpoints by design; workflow and permissions stay server-side)
   /// and returns the new issue id.
+  @override
   Future<int> createIssue(Map<String, dynamic> payload) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/issues.json',
@@ -142,6 +149,36 @@ class GttSyncClient {
       throw StateError('Issue creation returned no id');
     }
     return id;
+  }
+
+  /// Issues the current user authored in a project since a point in time,
+  /// via the stock REST index. Fractional seconds are stripped because
+  /// Redmine's `created_on` filter parser rejects them.
+  @override
+  Future<List<CreatedIssue>> myIssuesCreatedSince({
+    required int projectId,
+    required DateTime since,
+  }) async {
+    final stamp = since.toUtc().toIso8601String().split('.').first;
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/issues.json',
+      queryParameters: {
+        'project_id': projectId,
+        'author_id': 'me',
+        'status_id': '*',
+        'created_on': '>=${stamp}Z',
+        'limit': 100,
+      },
+    );
+    final issues = response.data?['issues'];
+    if (issues is! List) {
+      return const [];
+    }
+    return [
+      for (final issue in issues.whereType<Map<String, dynamic>>())
+        if ((issue['id'] as num?)?.toInt() case final int id)
+          (id: id, subject: issue['subject'] as String? ?? ''),
+    ];
   }
 
   /// Authenticated binary fetch for same-instance assets (attachment

@@ -4,6 +4,7 @@ import 'features/capture/capture_screen.dart';
 import 'features/connect/connect_screen.dart';
 import 'features/issues/issue_detail_screen.dart';
 import 'features/issues/issues_screen.dart';
+import 'features/outbox/outbox_screen.dart';
 
 final router = GoRouter(
   routes: [
@@ -12,6 +13,7 @@ final router = GoRouter(
       path: '/capture',
       builder: (context, state) => const CaptureScreen(),
     ),
+    GoRoute(path: '/outbox', builder: (context, state) => const OutboxScreen()),
     GoRoute(
       path: '/issues',
       builder: (context, state) => const IssuesScreen(),

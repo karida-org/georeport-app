@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/bundle.dart';
 import '../../connections/connection_manager.dart';
+import '../outbox/outbox_banner.dart';
 import 'issues_list_view.dart';
 import 'issues_maplibre_view.dart';
 import 'issues_store.dart';
@@ -105,6 +106,7 @@ class IssuesScreen extends ConsumerWidget {
             );
             return Column(
               children: [
+                const OutboxBanner(),
                 if (currentUser != null)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),

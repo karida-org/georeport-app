@@ -1,30 +1,37 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models/project_schema.dart';
-import '../../capture/issue_draft.dart';
+import '../../connections/connection_manager.dart';
 import '../issues/issue_providers.dart';
+import 'schema_cache.dart';
 
-/// The editing schema for one project, driving the create form.
+/// The editing schema for one project, driving the create form. Successful
+/// fetches refresh the on-disk cache; in a dead spot the last-known schema
+/// keeps the capture form usable.
 final projectSchemaProvider = FutureProvider.autoDispose
-    .family<ProjectSchema, int>((ref, projectId) {
-      return ref.watch(activeClientProvider).projectSchema(projectId);
+    .family<ProjectSchema, int>((ref, projectId) async {
+      final client = ref.watch(activeClientProvider);
+      final connectionId = ref
+          .watch(connectionManagerProvider)
+          .value
+          ?.active
+          ?.connection
+          .id;
+      final cache = await ref.watch(schemaCacheProvider.future);
+      try {
+        final json = await client.projectSchemaJson(projectId);
+        if (connectionId != null) {
+          await cache.write(connectionId, projectId, json);
+        }
+        return ProjectSchema.fromJson(json);
+      } on DioException {
+        final cached = connectionId == null
+            ? null
+            : await cache.read(connectionId, projectId);
+        if (cached != null) {
+          return ProjectSchema.fromJson(cached);
+        }
+        rethrow;
+      }
     });
-
-/// Uploads the draft's photos (token flow) and creates the issue.
-/// Returns the new issue id. Failures throw; the caller keeps the draft so
-/// nothing the user entered is lost.
-final submitDraftProvider = Provider.autoDispose(
-  (ref) => (IssueDraft draft) async {
-    final client = ref.read(activeClientProvider);
-    final uploads = <Map<String, String>>[];
-    for (final photo in draft.photos) {
-      final token = await client.uploadFile(photo.bytes, photo.filename);
-      uploads.add({
-        'token': token,
-        'filename': photo.filename,
-        if (photo.contentType case final String type) 'content_type': type,
-      });
-    }
-    return client.createIssue(draft.toPayload(uploads));
-  },
-);
