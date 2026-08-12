@@ -95,9 +95,10 @@ class _IssuesMapLibreViewState extends ConsumerState<IssuesMapLibreView> {
       latitudeNorth: center.lat + 0.1,
     );
     debugPrint('[offline] bounds: $bounds, creating manager');
-    final manager = await OfflineManager.createInstance();
-    debugPrint('[offline] manager ready, starting download');
+    OfflineManager? manager;
     try {
+      manager = await OfflineManager.createInstance();
+      debugPrint('[offline] manager ready, starting download');
       DownloadProgress? last;
       await for (final update in manager.downloadRegion(
         mapStyleUrl: _styleUrl,
@@ -130,7 +131,7 @@ class _IssuesMapLibreViewState extends ConsumerState<IssuesMapLibreView> {
         SnackBar(content: Text('Offline download failed: $error')),
       );
     } finally {
-      manager.dispose();
+      manager?.dispose();
     }
   }
 

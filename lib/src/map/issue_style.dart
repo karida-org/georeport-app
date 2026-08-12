@@ -25,25 +25,40 @@ List<Object> statusColorExpression() => [
 /// Extracts per-tracker SVG strings from the raw `/gtt/settings.json`
 /// payload. Icons are stored as a JSON string inside the JSON, holding
 /// `{"id": ..., "svg": "<svg .../>"}`.
+///
+/// The payload is server-controlled decoration, so every shape is validated
+/// and anything unexpected is skipped rather than thrown.
 Map<int, String> parseTrackerIconSvgs(Map<String, dynamic> settings) {
-  final defaults = settings['gttDefaultSetting'] as Map<String, dynamic>?;
-  final icons = defaults?['defaultTrackerIcon'] as List<dynamic>? ?? const [];
+  final defaults = settings['gttDefaultSetting'];
+  if (defaults is! Map<String, dynamic>) {
+    return const {};
+  }
+  final icons = defaults['defaultTrackerIcon'];
+  if (icons is! List) {
+    return const {};
+  }
   final result = <int, String>{};
   for (final entry in icons) {
-    final iconEntry = entry as Map<String, dynamic>;
-    final trackerId = (iconEntry['trackerID'] as num?)?.toInt();
-    final rawIcon = iconEntry['icon'];
-    if (trackerId == null || rawIcon is! String || rawIcon.isEmpty) {
+    if (entry is! Map<String, dynamic>) {
       continue;
     }
+    final trackerId = entry['trackerID'];
+    final rawIcon = entry['icon'];
+    if (trackerId is! num || rawIcon is! String || rawIcon.isEmpty) {
+      continue;
+    }
+    Object? decoded;
     try {
-      final icon = json.decode(rawIcon) as Map<String, dynamic>;
-      final svg = icon['svg'] as String?;
-      if (svg != null && svg.isNotEmpty) {
-        result[trackerId] = svg;
-      }
+      decoded = json.decode(rawIcon);
     } on FormatException {
       continue;
+    }
+    if (decoded is! Map<String, dynamic>) {
+      continue;
+    }
+    final svg = decoded['svg'];
+    if (svg is String && svg.isNotEmpty) {
+      result[trackerId.toInt()] = svg;
     }
   }
   return result;
