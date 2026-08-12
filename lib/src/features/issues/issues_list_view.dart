@@ -1,54 +1,132 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/bundle.dart';
+import '../../api/models/geojson.dart';
+import '../../api/models/gtt_style_settings.dart';
+import '../../map/issue_style.dart';
+import 'issues_store.dart';
 
-class IssuesListView extends StatelessWidget {
-  const IssuesListView({required this.bundle, super.key});
+class IssuesListView extends ConsumerWidget {
+  const IssuesListView({
+    required this.issues,
+    required this.projects,
+    this.style,
+    super.key,
+  });
 
-  final Bundle bundle;
+  final List<BundleIssue> issues;
+  final List<BundleProject> projects;
+  final GttStyleSettings? style;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    if (bundle.issues.isEmpty) {
-      return Center(child: Text(l10n.issuesEmpty));
-    }
+    final refreshFailed = l10n.issuesRefreshFailed;
+    final content = issues.isEmpty
+        ? _EmptyListPlaceholder(message: l10n.issuesEmpty)
+        : _buildList(context, l10n);
+    return RefreshIndicator(
+      onRefresh: () async {
+        try {
+          await ref.read(issuesProvider.notifier).refresh();
+        } on Exception catch (error) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('$refreshFailed $error')));
+          }
+        }
+      },
+      child: content,
+    );
+  }
+
+  Widget _buildList(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     final projectNames = {
-      for (final project in bundle.projects) project.id: project.name,
+      for (final project in projects) project.id: project.name,
     };
-    final dateFormat = DateFormat.yMMMd(l10n.localeName);
+    final dateFormat = DateFormat.MMMd(l10n.localeName);
+    final today = DateTime.now();
     return ListView.separated(
-      itemCount: bundle.issues.length,
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: issues.length,
       separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {
-        final issue = bundle.issues[index];
+        final issue = issues[index];
         final summary = issue.summary;
-        final subtitleParts = [
+        final statusColor = _parseHex(
+          statusColorFor(summary.statusId, style?.statusColors ?? const {}),
+        );
+        final trackerName = style?.trackerNames[summary.trackerId];
+        final statusName = style?.statusNames[summary.statusId];
+        final dueDate = summary.dueDate;
+        final overdue =
+            dueDate != null &&
+            dueDate.isBefore(DateTime(today.year, today.month, today.day));
+        final metaParts = [
+          ?trackerName,
+          ?statusName,
           if (projectNames[summary.projectId] case final String name) name,
           if (summary.assignedTo case final String assignee) assignee,
-          if (summary.dueDate case final DateTime dueDate)
-            l10n.issuesDueDate(dateFormat.format(dueDate)),
         ];
         return ListTile(
           leading: Icon(
-            issue.isPlaced ? Icons.place : Icons.location_off,
-            color: issue.isPlaced
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.outline,
+            // The geometry kind is readable straight from the list: pin,
+            // route, or area, with a struck pin for unplaced issues.
+            switch (issue.geometry) {
+              PointGeometry() => Icons.place,
+              LineGeometry() => Icons.polyline,
+              PolygonGeometry() => Icons.pentagon_outlined,
+              null => Icons.location_off,
+            },
+            color: issue.isPlaced ? statusColor : theme.colorScheme.outline,
           ),
           title: Text('#${summary.id} ${summary.subject}'),
-          subtitle: Text(
-            subtitleParts.isEmpty
-                ? l10n.issuesUnplaced
-                : subtitleParts.join(' · '),
-          ),
-          trailing: issue.isPlaced ? null : Text(l10n.issuesUnplaced),
+          subtitle: Text(metaParts.join(' · ')),
+          trailing: issue.isPlaced
+              ? (dueDate == null
+                    ? null
+                    : Text(
+                        dateFormat.format(dueDate),
+                        style: TextStyle(
+                          color: overdue ? theme.colorScheme.error : null,
+                          fontWeight: overdue ? FontWeight.bold : null,
+                        ),
+                      ))
+              : Text(l10n.issuesUnplaced),
           onTap: () => context.go('/issues/${summary.id}'),
         );
       },
+    );
+  }
+
+  Color _parseHex(String hex) {
+    final value = int.tryParse(hex.replaceFirst('#', ''), radix: 16);
+    return value == null ? const Color(0xFF00695C) : Color(0xFF000000 | value);
+  }
+}
+
+/// Scrollable even when empty, so pull-to-refresh keeps working.
+class _EmptyListPlaceholder extends StatelessWidget {
+  const _EmptyListPlaceholder({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: constraints.maxHeight,
+          child: Center(child: Text(message)),
+        ),
+      ),
     );
   }
 }

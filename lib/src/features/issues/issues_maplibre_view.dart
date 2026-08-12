@@ -1,11 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maplibre/maplibre.dart';
 
 import '../../api/models/bundle.dart';
-import '../../connections/connection_manager.dart';
+import '../../api/models/gtt_style_settings.dart';
 import '../../map/bundle_bounds.dart';
 import '../../map/bundle_sources.dart';
 import '../../map/issue_layers.dart';
@@ -19,16 +18,21 @@ const _styleUrl = String.fromEnvironment(
   defaultValue: 'https://tiles.openfreemap.org/styles/liberty',
 );
 
-class IssuesMapLibreView extends ConsumerStatefulWidget {
-  const IssuesMapLibreView({required this.bundle, super.key});
+class IssuesMapLibreView extends StatefulWidget {
+  const IssuesMapLibreView({
+    required this.issues,
+    this.styleSettings,
+    super.key,
+  });
 
-  final Bundle bundle;
+  final List<BundleIssue> issues;
+  final GttStyleSettings? styleSettings;
 
   @override
-  ConsumerState<IssuesMapLibreView> createState() => _IssuesMapLibreViewState();
+  State<IssuesMapLibreView> createState() => _IssuesMapLibreViewState();
 }
 
-class _IssuesMapLibreViewState extends ConsumerState<IssuesMapLibreView> {
+class _IssuesMapLibreViewState extends State<IssuesMapLibreView> {
   MapController? _controller;
   StyleController? _style;
 
@@ -76,10 +80,10 @@ class _IssuesMapLibreViewState extends ConsumerState<IssuesMapLibreView> {
   @override
   void didUpdateWidget(IssuesMapLibreView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.bundle, widget.bundle)) {
+    if (!identical(oldWidget.issues, widget.issues)) {
       final style = _style;
       if (style != null) {
-        updateIssueSources(style, bundleToSources(widget.bundle)).catchError(
+        updateIssueSources(style, bundleToSources(widget.issues)).catchError(
           (Object error) => debugPrint('Map source refresh failed: $error'),
         );
       }
@@ -88,18 +92,16 @@ class _IssuesMapLibreViewState extends ConsumerState<IssuesMapLibreView> {
 
   Future<void> _onStyleLoaded(StyleController style) async {
     _style = style;
-    await addIssueSources(style, bundleToSources(widget.bundle));
-    await addIssueLayers(style);
-    final client = ref.read(connectionManagerProvider).value?.active?.client;
-    if (client != null) {
-      await addTrackerIconLayer(style, client);
-    }
-    await _fitToBundle();
+    final settings = widget.styleSettings;
+    await addIssueSources(style, bundleToSources(widget.issues));
+    await addIssueLayers(style, statusColors: settings?.statusColors);
+    await addTrackerIconLayer(style, settings?.trackerSvgs ?? const {});
+    await _fitToIssues();
   }
 
-  Future<void> _fitToBundle() async {
+  Future<void> _fitToIssues() async {
     final controller = _controller;
-    final bounds = boundsForBundle(widget.bundle);
+    final bounds = boundsForBundle(widget.issues);
     if (controller == null || bounds == null) {
       return;
     }

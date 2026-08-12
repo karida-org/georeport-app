@@ -2,28 +2,24 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:maplibre/maplibre.dart';
 
-import '../api/gtt_sync_client.dart';
 import 'issue_layers.dart';
-import 'issue_style.dart';
 import 'svg_raster.dart';
 
-/// Fetches the instance's per-tracker SVG icons, rasterizes them, and adds a
-/// symbol layer that draws them on top of the status circles.
+/// Rasterizes the instance's per-tracker SVG icons and adds a symbol layer
+/// that draws them on top of the status circles.
 ///
-/// Icons are decoration; any failure (endpoint missing, malformed payload,
-/// SVG quirks) is swallowed so the circles stay fully functional.
+/// Icons are decoration; any failure (no icons configured, SVG quirks)
+/// leaves the circles fully functional.
 Future<void> addTrackerIconLayer(
   StyleController style,
-  GttSyncClient client,
+  Map<int, String> trackerSvgs,
 ) async {
+  if (trackerSvgs.isEmpty) {
+    return;
+  }
   try {
-    final settings = await client.gttSettings();
-    final svgs = parseTrackerIconSvgs(settings);
-    if (svgs.isEmpty) {
-      return;
-    }
     final images = <String, Uint8List>{};
-    for (final entry in svgs.entries) {
+    for (final entry in trackerSvgs.entries) {
       images['tracker-${entry.key}'] = await rasterizeSvg(
         entry.value,
         size: 32,

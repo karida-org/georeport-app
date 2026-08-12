@@ -14,15 +14,15 @@ class BundleSources {
   final Map<String, dynamic> polygons;
 }
 
-/// Rebuilds GeoJSON FeatureCollections from a parsed bundle, keeping the
-/// original geometry objects and exposing the properties the style needs for
-/// data-driven expressions and tap handling.
-BundleSources bundleToSources(Bundle bundle) {
+/// Rebuilds GeoJSON FeatureCollections from parsed bundle issues, keeping
+/// the original geometry objects and exposing the properties the style needs
+/// for data-driven expressions and tap handling.
+BundleSources bundleToSources(Iterable<BundleIssue> bundleIssues) {
   final points = <Map<String, dynamic>>[];
   final lines = <Map<String, dynamic>>[];
   final polygons = <Map<String, dynamic>>[];
 
-  for (final issue in bundle.issues) {
+  for (final issue in bundleIssues) {
     final geometry = issue.geometryJson;
     if (geometry == null) {
       continue;

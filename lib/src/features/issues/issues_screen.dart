@@ -3,10 +3,35 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
+import '../../api/models/bundle.dart';
 import '../../connections/connection_manager.dart';
-import 'issue_providers.dart';
 import 'issues_list_view.dart';
 import 'issues_maplibre_view.dart';
+import 'issues_store.dart';
+
+/// Which slice of the loaded issues My Work shows.
+enum MyWorkFilter { mine, all }
+
+/// Defaults to "mine" when the signed-in account is known; the whole filter
+/// is hidden (and everything shown) when it is not.
+final myWorkFilterProvider =
+    NotifierProvider<MyWorkFilterNotifier, MyWorkFilter>(
+      MyWorkFilterNotifier.new,
+    );
+
+class MyWorkFilterNotifier extends Notifier<MyWorkFilter> {
+  @override
+  MyWorkFilter build() {
+    final user = ref
+        .watch(connectionManagerProvider)
+        .value
+        ?.active
+        ?.currentUser;
+    return user == null ? MyWorkFilter.all : MyWorkFilter.mine;
+  }
+
+  void select(MyWorkFilter filter) => state = filter;
+}
 
 class IssuesScreen extends ConsumerWidget {
   const IssuesScreen({super.key});
@@ -14,7 +39,11 @@ class IssuesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final bundle = ref.watch(bundleProvider);
+    final issues = ref.watch(issuesProvider);
+    final active = ref.watch(connectionManagerProvider).value?.active;
+    final currentUser = active?.currentUser;
+    final filter = ref.watch(myWorkFilterProvider);
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -24,7 +53,7 @@ class IssuesScreen extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: l10n.issuesRefreshTooltip,
-              onPressed: () => ref.invalidate(bundleProvider),
+              onPressed: () => ref.invalidate(issuesProvider),
             ),
             IconButton(
               icon: const Icon(Icons.logout),
@@ -42,7 +71,7 @@ class IssuesScreen extends ConsumerWidget {
             ],
           ),
         ),
-        body: bundle.when(
+        body: issues.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => Center(
             child: Padding(
@@ -56,21 +85,77 @@ class IssuesScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   FilledButton(
-                    onPressed: () => ref.invalidate(bundleProvider),
+                    onPressed: () => ref.invalidate(issuesProvider),
                     child: Text(l10n.retryButton),
                   ),
                 ],
               ),
             ),
           ),
-          data: (data) => TabBarView(
-            children: [
-              IssuesListView(bundle: data),
-              IssuesMapLibreView(bundle: data),
-            ],
-          ),
+          data: (data) {
+            final visible = _filtered(
+              data.sorted,
+              filter,
+              currentUser?.displayName,
+            );
+            return Column(
+              children: [
+                if (currentUser != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: SegmentedButton<MyWorkFilter>(
+                      segments: [
+                        ButtonSegment(
+                          value: MyWorkFilter.mine,
+                          label: Text(l10n.myWorkFilterMine),
+                          icon: const Icon(Icons.person),
+                        ),
+                        ButtonSegment(
+                          value: MyWorkFilter.all,
+                          label: Text(l10n.myWorkFilterAll),
+                          icon: const Icon(Icons.group),
+                        ),
+                      ],
+                      selected: {filter},
+                      onSelectionChanged: (selection) => ref
+                          .read(myWorkFilterProvider.notifier)
+                          .select(selection.single),
+                    ),
+                  ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      IssuesListView(
+                        issues: visible,
+                        projects: data.projects,
+                        style: active?.styleSettings,
+                      ),
+                      IssuesMapLibreView(
+                        issues: visible,
+                        styleSettings: active?.styleSettings,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
+  }
+
+  List<BundleIssue> _filtered(
+    List<BundleIssue> issues,
+    MyWorkFilter filter,
+    String? displayName,
+  ) {
+    if (filter == MyWorkFilter.all || displayName == null) {
+      return issues;
+    }
+    return [
+      for (final issue in issues)
+        if (issue.summary.assignedTo == displayName) issue,
+    ];
   }
 }

@@ -10,7 +10,7 @@ void main() {
     final json =
         jsonDecode(File('test/fixtures/bundle.json').readAsStringSync())
             as Map<String, dynamic>;
-    final bounds = boundsForBundle(Bundle.fromJson(json));
+    final bounds = boundsForBundle(Bundle.fromJson(json).issues);
 
     expect(bounds, isNotNull);
     expect(bounds!.longitudeWest, lessThan(bounds.longitudeEast));
@@ -27,7 +27,7 @@ void main() {
           'polygon': {'type': 'FeatureCollection', 'features': <Object>[]},
           'unplaced': <Object>[],
         },
-      }),
+      }).issues,
     );
 
     expect(bounds, isNull);
