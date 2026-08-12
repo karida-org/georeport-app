@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maplibre/maplibre.dart';
@@ -8,12 +7,11 @@ import '../../api/models/gtt_style_settings.dart';
 import '../../map/bundle_bounds.dart';
 import '../../map/bundle_sources.dart';
 import '../../map/issue_layers.dart';
-import '../../map/offline_evaluation.dart';
 import '../../map/tracker_icons.dart';
 
 /// Overridable at build time, e.g. for a self-hosted style or a local dev
 /// proxy: `flutter run --dart-define=GEOREPORT_MAP_STYLE=<url>`.
-const _styleUrl = String.fromEnvironment(
+const mapStyleUrl = String.fromEnvironment(
   'GEOREPORT_MAP_STYLE',
   defaultValue: 'https://tiles.openfreemap.org/styles/liberty',
 );
@@ -22,11 +20,16 @@ class IssuesMapLibreView extends StatefulWidget {
   const IssuesMapLibreView({
     required this.issues,
     this.styleSettings,
+    this.onController,
     super.key,
   });
 
   final List<BundleIssue> issues;
   final GttStyleSettings? styleSettings;
+
+  /// Hands the map controller to the parent (the controls button beside the
+  /// filter row needs the camera); called with null again on dispose.
+  final void Function(MapController? controller)? onController;
 
   @override
   State<IssuesMapLibreView> createState() => _IssuesMapLibreViewState();
@@ -37,45 +40,29 @@ class _IssuesMapLibreViewState extends State<IssuesMapLibreView> {
   StyleController? _style;
 
   @override
+  void dispose() {
+    widget.onController?.call(null);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final map = MapLibreMap(
       options: const MapOptions(
-        initStyle: _styleUrl,
+        initStyle: mapStyleUrl,
         initCenter: Geographic(lon: 137.0, lat: 37.0),
         initZoom: 3,
       ),
-      onMapCreated: (controller) => _controller = controller,
+      onMapCreated: (controller) {
+        _controller = controller;
+        widget.onController?.call(controller);
+      },
       onStyleLoaded: _onStyleLoaded,
       onEvent: _onEvent,
       // Bottom-left keeps the attribution clear of the FAB.
       children: const [SourceAttribution(alignment: Alignment.bottomLeft)],
     );
-    if (!kDebugMode) {
-      return map;
-    }
-    return Stack(
-      children: [
-        map,
-        Positioned(
-          left: 8,
-          bottom: 48,
-          child: IconButton.filledTonal(
-            icon: const Icon(Icons.download_for_offline),
-            tooltip: 'Dev: download an offline region for evaluation',
-            onPressed: () {
-              final controller = _controller;
-              if (controller != null) {
-                downloadRegionForEvaluation(
-                  controller: controller,
-                  messenger: ScaffoldMessenger.of(context),
-                  styleUrl: _styleUrl,
-                );
-              }
-            },
-          ),
-        ),
-      ],
-    );
+    return map;
   }
 
   @override
