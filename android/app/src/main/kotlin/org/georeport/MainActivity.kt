@@ -78,7 +78,12 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun copyToCache(uri: Uri): String? = runCatching {
-        val name = displayNameOf(uri) ?: "shared-${System.currentTimeMillis()}.jpg"
+        // DISPLAY_NAME comes from another app's content provider; reduce it
+        // to a plain basename so it can never traverse out of the cache.
+        val name = (displayNameOf(uri) ?: "shared.jpg")
+            .substringAfterLast('/')
+            .substringAfterLast('\\')
+            .ifBlank { "shared.jpg" }
         val dir = File(cacheDir, "shared").apply { mkdirs() }
         val target = File(dir, "${System.nanoTime()}-$name")
         contentResolver.openInputStream(uri)!!.use { input ->

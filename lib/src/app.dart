@@ -14,9 +14,10 @@ class GeoreportApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Keeps the share intake alive for the whole app: images shared from
-    // other apps open the capture flow, whenever a session is ready.
-    ref.watch(shareIntakeProvider);
+    // Keeps the share intake alive for the whole app (images shared from
+    // other apps open the capture flow whenever a session is ready) without
+    // rebuilding the MaterialApp on its state changes.
+    ref.listen(shareIntakeProvider, (previous, next) {});
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       locale: locale,
