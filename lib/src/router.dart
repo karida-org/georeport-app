@@ -51,8 +51,11 @@ final router = GoRouter(
           int.tryParse(state.pathParameters['id'] ?? '') == null
           ? '/issues'
           : null,
-      builder: (context, state) =>
-          IssueDetailScreen(issueId: int.parse(state.pathParameters['id']!)),
+      builder: (context, state) => IssueDetailScreen(
+        issueId: int.parse(state.pathParameters['id']!),
+        // The timer notification's "Log time" action lands here.
+        openQuickLog: state.uri.queryParameters['log'] == '1',
+      ),
     ),
     // The signed-in shell: Home, Issues, Map, and Time as stateful branches
     // behind the bottom bar (branch order defines the indices used by

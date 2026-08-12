@@ -337,5 +337,7 @@
       }
     }
   },
-  "issueShareTooltip": "Share"
+  "issueShareTooltip": "Share",
+  "timerNotificationChannelName": "Running timer",
+  "timerNotificationChannelDescription": "Reminds you while a timer is running."
 }
