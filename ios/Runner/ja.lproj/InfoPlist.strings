@@ -1,0 +1,4 @@
+/* 権限の利用目的。Info.plist の英語文と同期を保つこと。 */
+"NSCameraUsageDescription" = "撮影した写真は、報告するレポートの記録として使われます。";
+"NSPhotoLibraryUsageDescription" = "選択した写真は、報告するレポートに添付されます。";
+"NSLocationWhenInUseUsageDescription" = "現在地は、報告するレポートの場所の提案に使われます。";

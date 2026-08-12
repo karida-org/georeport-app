@@ -1,0 +1,4 @@
+/* Permission purpose strings; keep in sync with Info.plist. */
+"NSCameraUsageDescription" = "Photos you take document the issue you are reporting.";
+"NSPhotoLibraryUsageDescription" = "Photos you pick are attached to the issue you are reporting.";
+"NSLocationWhenInUseUsageDescription" = "Your location suggests where the issue you are reporting is.";
