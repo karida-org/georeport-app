@@ -31,17 +31,19 @@ class TimerNotifications {
   static const _channelId = 'running_timer';
   static const _categoryId = 'georeport_timer';
 
-  bool _initialized = false;
+  Future<void>? _initializing;
 
   /// Both actions open the app (showsUserInterface): handling them in the
   /// main isolate keeps the timer store single-writer, at the cost of the
   /// app coming to the foreground on Pause. A background-isolate handler
   /// would need its own store access; deliberate v1 trade-off.
-  Future<void> init(TimerActionHandler onAction) async {
-    if (_initialized) {
-      return;
-    }
-    _initialized = true;
+  ///
+  /// Memoized as a future, so callers racing at startup all await the same
+  /// initialization instead of the second one skipping past it.
+  Future<void> init(TimerActionHandler onAction) =>
+      _initializing ??= _initialize(onAction);
+
+  Future<void> _initialize(TimerActionHandler onAction) async {
     await _plugin.initialize(
       settings: InitializationSettings(
         android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
