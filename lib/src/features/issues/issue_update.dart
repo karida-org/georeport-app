@@ -24,8 +24,11 @@ Map<String, dynamic> buildIssueUpdatePayload({
 }) {
   return {
     'issue': {
-      // Field edits first, so the versioning keys below always win.
-      ...fields,
+      // Field edits first, and stripped of the keys this function owns, so
+      // no caller can smuggle in a version, a status, notes, or uploads
+      // through the field map.
+      for (final entry in fields.entries)
+        if (!_reservedUpdateKeys.contains(entry.key)) entry.key: entry.value,
       'lock_version': lockVersion,
       'status_id': ?statusId,
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
@@ -33,6 +36,9 @@ Map<String, dynamic> buildIssueUpdatePayload({
     },
   };
 }
+
+/// Keys [buildIssueUpdatePayload] sets from its own parameters.
+const _reservedUpdateKeys = {'lock_version', 'status_id', 'notes', 'uploads'};
 
 /// Whether a rejected update means "someone changed the issue first".
 /// RedMica's REST answers a stale lock_version with 422 and an EMPTY errors

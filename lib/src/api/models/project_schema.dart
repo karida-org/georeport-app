@@ -9,6 +9,32 @@ class SchemaOption {
   final String name;
 }
 
+/// The schema's reference options, narrowed rather than cast: an unexpected
+/// shape yields no options (the picker hides) instead of throwing during
+/// parse. Entries without a usable id and name are dropped, since neither
+/// a nameless option nor one Redmine cannot resolve is selectable.
+Map<String, List<SchemaOption>> _references(Object? raw) {
+  if (raw is! Map<String, dynamic>) {
+    return const {};
+  }
+  final references = <String, List<SchemaOption>>{};
+  for (final entry in raw.entries) {
+    final options = <SchemaOption>[];
+    for (final option in entry.value is List ? entry.value as List : const []) {
+      if (option is! Map<String, dynamic>) {
+        continue;
+      }
+      final id = (option['id'] as num?)?.toInt() ?? 0;
+      final name = option['name'] as String? ?? '';
+      if (id > 0 && name.isNotEmpty) {
+        options.add(SchemaOption(id: id, name: name));
+      }
+    }
+    references[entry.key] = options;
+  }
+  return references;
+}
+
 class ProjectSchema {
   const ProjectSchema({
     required this.trackers,
@@ -35,19 +61,7 @@ class ProjectSchema {
       writable: (json['writable'] as List<dynamic>? ?? const [])
           .whereType<String>()
           .toSet(),
-      references: {
-        for (final entry
-            in (json['references'] as Map<String, dynamic>? ?? const {})
-                .entries)
-          entry.key: [
-            for (final option in entry.value as List<dynamic>? ?? const [])
-              if (option is Map<String, dynamic>)
-                SchemaOption(
-                  id: (option['id'] as num?)?.toInt() ?? 0,
-                  name: option['name'] as String? ?? '',
-                ),
-          ],
-      },
+      references: _references(json['references']),
       timeEntry: json['time_entry'] is Map<String, dynamic>
           ? TimeEntrySection.fromJson(
               json['time_entry'] as Map<String, dynamic>,

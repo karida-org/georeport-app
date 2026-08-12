@@ -13,6 +13,25 @@ import '../../capture/location_picker_screen.dart';
 import '../issue_providers.dart';
 import '../issue_update.dart';
 
+/// The fields the edit form knows how to render; the action appears when
+/// the contract allows any of them, so a user who may change only, say,
+/// progress still reaches the form.
+const editableFormFields = {
+  'subject',
+  'description',
+  'priority_id',
+  'assigned_to_id',
+  'due_date',
+  'done_ratio',
+  'geojson',
+  'custom_field_values',
+  'custom_fields',
+};
+
+/// Whether this issue offers anything the edit form can change.
+bool canEditIssue(IssueDocument issue) =>
+    issue.editable.fields.any(editableFormFields.contains);
+
 /// Opens the field editor for an issue, full screen (it carries more than a
 /// sheet comfortably holds).
 Future<void> showEditIssueScreen(
@@ -82,6 +101,11 @@ class _EditIssueScreenState extends ConsumerState<EditIssueScreen> {
       widget.issue.editable.fields.contains(field) &&
       schema.writable.contains(field);
 
+  /// Custom fields travel under either key depending on the contract's
+  /// vocabulary; the payload always writes `custom_fields`.
+  bool _canEditCustomFields(ProjectSchema schema) =>
+      _can(schema, 'custom_field_values') || _can(schema, 'custom_fields');
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -91,7 +115,11 @@ class _EditIssueScreenState extends ConsumerState<EditIssueScreen> {
         title: Text(l10n.editIssueTitle),
         actions: [
           TextButton(
-            onPressed: _saving ? null : () => _save(context),
+            // Nothing to save before the schema decides which fields the
+            // form may even offer.
+            onPressed: _saving || !schema.hasValue
+                ? null
+                : () => _save(context),
             child: Text(l10n.saveButton),
           ),
         ],
@@ -246,7 +274,7 @@ class _EditIssueScreenState extends ConsumerState<EditIssueScreen> {
             },
           ),
         ],
-        if (_can(schema, 'custom_field_values'))
+        if (_canEditCustomFields(schema))
           for (final field in customFields)
             if (supportedCustomFieldFormats.contains(field.fieldFormat)) ...[
               const SizedBox(height: 16),

@@ -99,4 +99,26 @@ void main() {
     expect(issue['lock_version'], 7);
     expect(issue.containsKey('status_id'), isFalse);
   });
+
+  test('reserved keys cannot be smuggled in through fields', () {
+    final payload = buildIssueUpdatePayload(
+      lockVersion: 3,
+      fields: {
+        'subject': 'Kept',
+        // All four are owned by the function's own parameters.
+        'lock_version': 999,
+        'status_id': 42,
+        'notes': 'sneaky',
+        'uploads': [
+          {'token': 'x'},
+        ],
+      },
+    );
+    final issue = payload['issue'] as Map<String, dynamic>;
+    expect(issue['subject'], 'Kept');
+    expect(issue['lock_version'], 3);
+    expect(issue.containsKey('status_id'), isFalse);
+    expect(issue.containsKey('notes'), isFalse);
+    expect(issue.containsKey('uploads'), isFalse);
+  });
 }

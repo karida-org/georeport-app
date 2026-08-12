@@ -117,7 +117,7 @@ class _IssueDetailScreenState extends ConsumerState<IssueDetailScreen> {
             ),
           ],
           if (document.value case final IssueDocument issue
-              when issue.editable.fields.contains('subject'))
+              when canEditIssue(issue))
             IconButton(
               icon: const Icon(Icons.edit_outlined),
               tooltip: l10n.editIssueTooltip,
