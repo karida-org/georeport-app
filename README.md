@@ -45,6 +45,20 @@ and `lib/l10n/app_ja.arb`. Add every new key to both files; a test enforces
 key parity. The generated Dart bindings under `lib/l10n/generated/` are
 created by `flutter pub get` and are not committed.
 
+## Releases
+
+Pushing a tag matching `v*.*.*` builds release artifacts and publishes them
+on a GitHub Release (`.github/workflows/release.yml`): an Android APK for
+direct installation, an AAB for a future Play Store track, an unsigned iOS
+archive, and a `SHA256SUMS` file. The version name comes from the tag and
+the Android version code from the workflow run number, so no `pubspec.yaml`
+bump is needed per release.
+
+Android release signing is optional and configured through repository
+secrets (`ANDROID_KEYSTORE` as base64, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`). Without them the APK/AAB are
+debug-signed: fine for early testers, not accepted by app stores.
+
 ## Contributing
 
 Issue-first: every change starts as a GitHub issue and lands via pull
