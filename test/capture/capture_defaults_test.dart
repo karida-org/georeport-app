@@ -21,4 +21,16 @@ void main() {
     expect(await defaults.lastTracker(1), 4);
     expect(await defaults.lastTracker(2), 7);
   });
+
+  test('clear forgets the project and every per-project tracker', () async {
+    final defaults = CaptureDefaults();
+    await defaults.remember(projectId: 1, trackerId: 4);
+    await defaults.remember(projectId: 2, trackerId: 7);
+
+    await defaults.clear();
+
+    expect(await defaults.lastProject(), isNull);
+    expect(await defaults.lastTracker(1), isNull);
+    expect(await defaults.lastTracker(2), isNull);
+  });
 }

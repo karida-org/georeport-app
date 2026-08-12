@@ -8,6 +8,7 @@ import 'features/issues/issue_detail_screen.dart';
 import 'features/issues/issues_screen.dart';
 import 'features/issues/map_screen.dart';
 import 'features/outbox/outbox_screen.dart';
+import 'features/settings/settings_screen.dart';
 import 'features/time/time_screen.dart';
 import 'shell/app_shell.dart';
 
@@ -35,6 +36,11 @@ final router = GoRouter(
       path: '/outbox',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const OutboxScreen(),
+    ),
+    GoRoute(
+      path: '/settings',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SettingsScreen(),
     ),
     GoRoute(
       path: '/issues/:id',

@@ -302,5 +302,41 @@
       }
     }
   },
-  "menuOffline": "Offline"
+  "menuOffline": "Offline",
+  "settingsTitle": "Settings",
+  "settingsPermissionsHeading": "Permissions",
+  "settingsLocationPermission": "Location",
+  "settingsLocationRationale": "Your location suggests where a new report is; without it you can still pick the spot on the map.",
+  "settingsPermissionGranted": "Allowed.",
+  "settingsPermissionNotGranted": "Not allowed.",
+  "settingsPermissionUnknown": "Could not check.",
+  "settingsPermissionAllow": "Allow",
+  "settingsOpenSystemSettings": "System settings",
+  "settingsOtherPermissions": "Camera and photos",
+  "settingsOtherPermissionsBody": "Asked for when you first take or attach a photo; manage them in the system settings.",
+  "settingsConnectionHeading": "Connection",
+  "settingsCaptureHeading": "New issue",
+  "settingsCaptureReset": "Forget remembered choices",
+  "settingsCaptureLastProject": "Remembered project: {name}",
+  "settingsCaptureNothingRemembered": "Nothing is remembered yet.",
+  "settingsCaptureResetDone": "Remembered choices cleared.",
+  "settingsAboutHeading": "About",
+  "settingsVersion": "Version {version}",
+  "settingsLicenseLine": "Free software under GPL-3.0-or-later.",
+  "settingsSourceCode": "Source code",
+  "settingsOssLicenses": "Open-source licenses",
+  "@settingsCaptureLastProject": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@settingsVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  }
 }
