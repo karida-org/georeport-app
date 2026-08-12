@@ -198,5 +198,45 @@
   "outboxDiscardBody": "The photos and details of this report will be lost.",
   "navHome": "Home",
   "navIssues": "Issues",
-  "homeActionIssues": "My issues"
+  "homeActionIssues": "My issues",
+  "timeLogTitle": "Log time",
+  "timeLogButton": "Log time",
+  "timeLogged": "Time logged.",
+  "timeHoursLabel": "Hours",
+  "timeActivityLabel": "Activity",
+  "timeCommentLabel": "Comment",
+  "timeSpentOnLabel": "Date",
+  "timeHoursInvalid": "Enter the hours as a number greater than zero.",
+  "timeLogFailed": "Could not log time: {message}",
+  "@timeLogFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "timerStartTooltip": "Start timer",
+  "timerPauseTooltip": "Pause timer",
+  "timerPausedPrevious": "Paused the timer on #{id}.",
+  "@timerPausedPrevious": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "undoButton": "Undo",
+  "timersCardTitle": "Timers",
+  "timeSummaryTitle": "My time",
+  "timeSummaryLine": "Today {today} h · This week {week} h",
+  "@timeSummaryLine": {
+    "placeholders": {
+      "today": {
+        "type": "String"
+      },
+      "week": {
+        "type": "String"
+      }
+    }
+  }
 }

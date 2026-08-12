@@ -12,6 +12,7 @@ import 'models/current_user.dart';
 import 'models/gtt_style_settings.dart';
 import 'models/issue_document.dart';
 import 'models/project_schema.dart';
+import 'models/time_entry.dart';
 
 /// Thin HTTP client for the `redmine_gtt_sync` contract.
 ///
@@ -179,6 +180,34 @@ class GttSyncClient implements IssueSubmitApi {
         if ((issue['id'] as num?)?.toInt() case final int id)
           (id: id, subject: issue['subject'] as String? ?? ''),
     ];
+  }
+
+  /// Logs time on an issue through the contract; runs as the authenticated
+  /// user. Returns the created entry. A 422 carries the server's validation
+  /// messages in the DioException response.
+  Future<TimeEntry> createTimeEntry(
+    int issueId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/gtt_sync/issues/$issueId/time_entries',
+      data: payload,
+    );
+    return TimeEntry.fromJson(response.data ?? const {});
+  }
+
+  /// The authenticated user's own time entries for a date range; totals in
+  /// the page cover the whole range even when the list is capped.
+  Future<TimeEntriesPage> timeEntries({DateTime? from, DateTime? to}) async {
+    String day(DateTime date) => date.toIso8601String().split('T').first;
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/gtt_sync/time_entries',
+      queryParameters: {
+        if (from != null) 'from': day(from),
+        if (to != null) 'to': day(to),
+      },
+    );
+    return TimeEntriesPage.fromJson(response.data ?? const {});
   }
 
   /// Authenticated binary fetch for same-instance assets (attachment

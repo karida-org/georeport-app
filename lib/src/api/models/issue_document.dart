@@ -144,6 +144,7 @@ class EditingContract {
     required this.canDelete,
     required this.canAddNotes,
     required this.canAddAttachments,
+    this.canLogTime = false,
     required this.statusTransitions,
   });
 
@@ -155,6 +156,7 @@ class EditingContract {
       canDelete: json['can_delete'] == true,
       canAddNotes: json['can_add_notes'] == true,
       canAddAttachments: json['can_add_attachments'] == true,
+      canLogTime: json['can_log_time'] == true,
       statusTransitions: [
         for (final status
             in json['status_transitions'] as List<dynamic>? ?? const [])
@@ -167,6 +169,10 @@ class EditingContract {
   final bool canDelete;
   final bool canAddNotes;
   final bool canAddAttachments;
+
+  /// Whether this user may log time on this issue (server-side:
+  /// `Issue#time_loggable?`, i.e. `:log_time` plus the closed-issues rule).
+  final bool canLogTime;
   final List<NamedRef> statusTransitions;
 }
 

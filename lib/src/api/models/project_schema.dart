@@ -5,6 +5,7 @@ class ProjectSchema {
     required this.trackers,
     required this.customFields,
     required this.writable,
+    this.timeEntry = const TimeEntrySection(),
   });
 
   factory ProjectSchema.fromJson(Map<String, dynamic> json) {
@@ -24,12 +25,21 @@ class ProjectSchema {
       writable: (json['writable'] as List<dynamic>? ?? const [])
           .whereType<String>()
           .toSet(),
+      timeEntry: json['time_entry'] is Map<String, dynamic>
+          ? TimeEntrySection.fromJson(
+              json['time_entry'] as Map<String, dynamic>,
+            )
+          : const TimeEntrySection(),
     );
   }
 
   final List<SchemaTracker> trackers;
   final List<SchemaCustomField> customFields;
   final Set<String> writable;
+
+  /// Whether and how the user may log time in this project; absent on
+  /// servers without the time-entry contract.
+  final TimeEntrySection timeEntry;
 
   /// The custom fields applicable to one tracker, required ones first.
   List<SchemaCustomField> fieldsForTracker(int trackerId) {
@@ -90,4 +100,49 @@ class SchemaCustomField {
   final bool multiple;
   final List<String> possibleValues;
   final List<int> trackerIds;
+}
+
+/// The schema's `time_entry` section: the permission, the project's
+/// activities, and the attribute names a create may carry.
+class TimeEntrySection {
+  const TimeEntrySection({this.canLogTime = false, this.activities = const []});
+
+  factory TimeEntrySection.fromJson(Map<String, dynamic> json) {
+    return TimeEntrySection(
+      canLogTime: json['can_log_time'] == true,
+      activities: [
+        for (final activity in json['activities'] as List<dynamic>? ?? const [])
+          if (activity is Map<String, dynamic>)
+            TimeEntryActivity(
+              id: (activity['id'] as num?)?.toInt() ?? 0,
+              name: activity['name'] as String? ?? '',
+              isDefault: activity['is_default'] == true,
+            ),
+      ],
+    );
+  }
+
+  final bool canLogTime;
+  final List<TimeEntryActivity> activities;
+
+  /// The activity a form preselects: the project default, else the first.
+  TimeEntryActivity? get defaultActivity => activities.isEmpty
+      ? null
+      : activities.firstWhere(
+          (a) => a.isDefault,
+          orElse: () => activities.first,
+        );
+}
+
+/// One time-entry activity available in a project.
+class TimeEntryActivity {
+  const TimeEntryActivity({
+    required this.id,
+    required this.name,
+    this.isDefault = false,
+  });
+
+  final int id;
+  final String name;
+  final bool isDefault;
 }

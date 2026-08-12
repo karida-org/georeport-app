@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../connections/connection_manager.dart';
 import '../outbox/outbox_banner.dart';
+import '../time/time_summary_card.dart';
+import '../time/timers_card.dart';
 
 /// The post-connect landing screen: glanceable state and one-tap actions
 /// instead of a browsing list. v1 carries the connection card, quick actions,
@@ -42,6 +44,8 @@ class DashboardScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const OutboxBanner(padding: EdgeInsets.only(bottom: 12)),
+          const TimersCard(),
+          const TimeSummaryCard(),
           if (active != null)
             Card(
               child: ListTile(
