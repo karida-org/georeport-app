@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
@@ -21,6 +22,13 @@ class IssueDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Lives on the root navigator, outside the shell and its session guard,
+    // so it carries its own: a dead session yields to the connect screen.
+    ref.listen(connectionManagerProvider, (previous, next) {
+      if (next.value != null && next.value!.active == null) {
+        context.go('/');
+      }
+    });
     final l10n = AppLocalizations.of(context);
     final document = ref.watch(issueDocumentProvider(issueId));
     return Scaffold(

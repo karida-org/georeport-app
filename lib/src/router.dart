@@ -37,6 +37,12 @@ final router = GoRouter(
     GoRoute(
       path: '/issues/:id',
       parentNavigatorKey: _rootNavigatorKey,
+      // A non-numeric id (bad deep link) falls back to the list instead of
+      // throwing while the route builds.
+      redirect: (context, state) =>
+          int.tryParse(state.pathParameters['id'] ?? '') == null
+          ? '/issues'
+          : null,
       builder: (context, state) =>
           IssueDetailScreen(issueId: int.parse(state.pathParameters['id']!)),
     ),
