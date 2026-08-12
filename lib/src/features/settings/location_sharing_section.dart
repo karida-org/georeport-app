@@ -10,11 +10,23 @@ import 'settings_widgets.dart';
 
 /// The opt-in for publishing your location, with the plain-language terms of
 /// the deal: latest point only, who can see it, and how to stop.
-class LocationSharingSection extends ConsumerWidget {
+class LocationSharingSection extends ConsumerStatefulWidget {
   const LocationSharingSection({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LocationSharingSection> createState() =>
+      _LocationSharingSectionState();
+}
+
+class _LocationSharingSectionState
+    extends ConsumerState<LocationSharingSection> {
+  /// A change is being applied (the permission ask can take a while). The
+  /// switch is disabled meanwhile, so a rapid on-off cannot land out of
+  /// order and leave sharing on after the user turned it off.
+  bool _applying = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final active = ref.watch(connectionManagerProvider).value?.active;
     // The server tells us whether it has the contract at all; without it the
@@ -34,7 +46,9 @@ class LocationSharingSection extends ConsumerWidget {
           subtitle: Text(l10n.locationSharingExplainer),
           isThreeLine: true,
           value: enabled,
-          onChanged: (value) => _setEnabled(ref, active.connection.id, value),
+          onChanged: _applying
+              ? null
+              : (value) => _setEnabled(active.connection.id, value),
         ),
         if (enabled)
           ListTile(
@@ -62,26 +76,34 @@ class LocationSharingSection extends ConsumerWidget {
     );
   }
 
-  Future<void> _setEnabled(
-    WidgetRef ref,
-    String connectionId,
-    bool value,
-  ) async {
-    if (value) {
-      // Ask here, where the user just chose to share: the publisher itself
-      // never prompts, so a denial simply leaves the toggle off.
-      final service = ref.read(locationPermissionServiceProvider);
-      if (await service.status() == LocationPermissionState.askable) {
-        await service.request();
+  Future<void> _setEnabled(String connectionId, bool value) async {
+    setState(() => _applying = true);
+    try {
+      if (value) {
+        // Ask here, where the user just chose to share: the publisher itself
+        // never prompts, so a denial simply leaves the toggle off.
+        final service = ref.read(locationPermissionServiceProvider);
+        if (await service.status() == LocationPermissionState.askable) {
+          await service.request();
+        }
+        if (!mounted) {
+          return;
+        }
+        ref.invalidate(locationPermissionProvider);
+        if (await service.status() != LocationPermissionState.granted) {
+          return;
+        }
       }
-      ref.invalidate(locationPermissionProvider);
-      if (await service.status() != LocationPermissionState.granted) {
-        return;
+      await ref
+          .read(locationSharingPreferenceProvider)
+          .setEnabled(connectionId, enabled: value);
+      if (mounted) {
+        ref.invalidate(locationSharingEnabledProvider);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _applying = false);
       }
     }
-    await ref
-        .read(locationSharingPreferenceProvider)
-        .setEnabled(connectionId, enabled: value);
-    ref.invalidate(locationSharingEnabledProvider);
   }
 }

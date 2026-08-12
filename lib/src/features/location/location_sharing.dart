@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../capture/device_location.dart';
 import '../../connections/connection_manager.dart';
-import '../../features/issues/issue_providers.dart';
 import '../../net/connectivity.dart';
 
 /// Whether the user opted into sharing their location, per connection: a
@@ -93,21 +92,43 @@ final locationSharingProvider = Provider<void>((ref) {
   const minMoveMeters = 50.0;
   const distance = Distance();
 
+  // Send history belongs to the connection it was gathered for: another
+  // instance must not inherit its throttling window or its shown time.
+  String? lastSentConnectionId;
   DateTime? lastSentAt;
   LatLng? lastSentPoint;
   var sending = false;
 
+  String? activeConnectionId() =>
+      ref.read(connectionManagerProvider).value?.active?.connection.id;
+
   Future<void> publish({required bool force}) async {
-    final enabled = await ref.read(locationSharingEnabledProvider.future);
-    if (!enabled || sending || !ref.read(isOnlineProvider)) {
+    if (sending || !ref.read(isOnlineProvider)) {
       return;
     }
     final lifecycle = WidgetsBinding.instance.lifecycleState;
     if (lifecycle != null && lifecycle != AppLifecycleState.resumed) {
       return;
     }
+    // Everything below is bound to THIS connection: getting a fix takes
+    // seconds, and in that window the user can opt out or switch instances.
+    final connectionId = activeConnectionId();
+    if (connectionId == null) {
+      return;
+    }
+    final preference = ref.read(locationSharingPreferenceProvider);
+    if (!await preference.isEnabled(connectionId)) {
+      return;
+    }
+    final client = ref.read(connectionManagerProvider).value?.active?.client;
+    if (client == null || !ref.mounted) {
+      return;
+    }
     final now = DateTime.now();
-    final since = lastSentAt;
+    // A different connection than the last send has no history to throttle
+    // against, so its first publish always goes out.
+    final sameConnection = lastSentConnectionId == connectionId;
+    final since = sameConnection ? lastSentAt : null;
     if (!force && since != null && now.difference(since) < minInterval) {
       return;
     }
@@ -120,18 +141,24 @@ final locationSharingProvider = Provider<void>((ref) {
       if (point == null || !ref.mounted) {
         return;
       }
-      final previous = lastSentPoint;
+      // Re-checked after the await: opting out, or switching instances,
+      // while a fix was in flight must cancel the publish entirely.
+      if (activeConnectionId() != connectionId ||
+          !await preference.isEnabled(connectionId) ||
+          !ref.mounted) {
+        return;
+      }
+      final previous = sameConnection ? lastSentPoint : null;
       if (!force &&
           previous != null &&
           distance.as(LengthUnit.Meter, previous, point) < minMoveMeters) {
         return;
       }
-      await ref
-          .read(activeClientProvider)
-          .publishLocation(point.latitude, point.longitude);
+      await client.publishLocation(point.latitude, point.longitude);
       if (!ref.mounted) {
         return;
       }
+      lastSentConnectionId = connectionId;
       lastSentAt = now;
       lastSentPoint = point;
       ref.read(locationSharingStatusProvider.notifier).recordShared(now);
@@ -144,6 +171,13 @@ final locationSharingProvider = Provider<void>((ref) {
     } finally {
       sending = false;
     }
+  }
+
+  void forgetSendHistory() {
+    lastSentConnectionId = null;
+    lastSentAt = null;
+    lastSentPoint = null;
+    ref.read(locationSharingStatusProvider.notifier).reset();
   }
 
   final timer = Timer.periodic(minInterval, (_) => publish(force: false));
@@ -161,9 +195,24 @@ final locationSharingProvider = Provider<void>((ref) {
       publish(force: true);
     }
     if (next.value == false && previous?.value == true) {
-      lastSentAt = null;
-      lastSentPoint = null;
-      ref.read(locationSharingStatusProvider.notifier).reset();
+      forgetSendHistory();
     }
   });
+
+  // Switching instances starts over: the new connection's own opt-in
+  // decides, and nothing from the previous one is shown or reused.
+  ref.listen(
+    connectionManagerProvider.select(
+      (state) => state.value?.active?.connection.id,
+    ),
+    (previous, next) {
+      if (previous == next) {
+        return;
+      }
+      forgetSendHistory();
+      if (next != null) {
+        publish(force: true);
+      }
+    },
+  );
 });
