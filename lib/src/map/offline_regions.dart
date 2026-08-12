@@ -18,11 +18,13 @@ Future<OfflineRegionResult> downloadCurrentRegion({
   required String styleUrl,
 }) async {
   final center = controller.getCamera().center;
+  // Clamped to valid coordinates (Web Mercator's latitude limit), so a
+  // camera near the edges of the world still yields a legal region.
   final bounds = LngLatBounds(
-    longitudeWest: center.lon - 0.15,
-    longitudeEast: center.lon + 0.15,
-    latitudeSouth: center.lat - 0.1,
-    latitudeNorth: center.lat + 0.1,
+    longitudeWest: (center.lon - 0.15).clamp(-180.0, 180.0),
+    longitudeEast: (center.lon + 0.15).clamp(-180.0, 180.0),
+    latitudeSouth: (center.lat - 0.1).clamp(-85.0, 85.0),
+    latitudeNorth: (center.lat + 0.1).clamp(-85.0, 85.0),
   );
   final manager = await OfflineManager.createInstance();
   try {

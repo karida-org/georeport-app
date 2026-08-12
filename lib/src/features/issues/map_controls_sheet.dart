@@ -42,9 +42,15 @@ class _MapControlsSheetState extends State<_MapControlsSheet> {
   }
 
   Future<void> _refreshStoredCount() async {
-    final count = await storedRegionCount();
-    if (mounted) {
-      setState(() => _storedRegions = count);
+    try {
+      final count = await storedRegionCount();
+      if (mounted) {
+        setState(() => _storedRegions = count);
+      }
+      // Fired from initState without an awaiter: a failure must not become
+      // an unhandled async error. No count just leaves the row disabled.
+    } on Exception catch (error) {
+      debugPrint('Stored region count unavailable: $error');
     }
   }
 
