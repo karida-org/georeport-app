@@ -6,7 +6,9 @@ import 'features/connect/connect_screen.dart';
 import 'features/home/dashboard_screen.dart';
 import 'features/issues/issue_detail_screen.dart';
 import 'features/issues/issues_screen.dart';
+import 'features/issues/map_screen.dart';
 import 'features/outbox/outbox_screen.dart';
+import 'features/time/time_screen.dart';
 import 'shell/app_shell.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -46,8 +48,9 @@ final router = GoRouter(
       builder: (context, state) =>
           IssueDetailScreen(issueId: int.parse(state.pathParameters['id']!)),
     ),
-    // The signed-in shell: Home and Issues as stateful branches behind the
-    // bottom navigation bar.
+    // The signed-in shell: Home, Issues, Map, and Time as stateful branches
+    // behind the bottom bar (branch order defines the indices used by
+    // GeoreportBottomBar and AppShell).
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => AppShell(shell: shell),
       branches: [
@@ -63,15 +66,26 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: '/issues',
-              builder: (context, state) {
-                final tab = state.uri.queryParameters['tab'];
-                return IssuesScreen(
-                  // Keyed so navigating with a different tab rebuilds even
-                  // though the branch keeps the screen alive.
-                  key: ValueKey('issues-${tab ?? 'list'}'),
-                  initialTab: tab == 'map' ? 1 : 0,
-                );
-              },
+              // The map used to be a tab here; keep old deep links working.
+              redirect: (context, state) =>
+                  state.uri.queryParameters['tab'] == 'map' ? '/map' : null,
+              builder: (context, state) => const IssuesScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/map',
+              builder: (context, state) => const MapScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/time',
+              builder: (context, state) => const TimeScreen(),
             ),
           ],
         ),
