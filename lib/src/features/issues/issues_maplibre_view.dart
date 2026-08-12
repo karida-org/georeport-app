@@ -5,12 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:maplibre/maplibre.dart';
 
 import '../../api/models/bundle.dart';
+import '../../connections/connection_manager.dart';
 import '../../map/bundle_bounds.dart';
 import '../../map/bundle_sources.dart';
 import '../../map/issue_layers.dart';
 import '../../map/offline_evaluation.dart';
 import '../../map/tracker_icons.dart';
-import '../connect/connection_provider.dart';
 
 /// Overridable at build time, e.g. for a self-hosted style or a local dev
 /// proxy: `flutter run --dart-define=GEOREPORT_MAP_STYLE=<url>`.
@@ -90,9 +90,9 @@ class _IssuesMapLibreViewState extends ConsumerState<IssuesMapLibreView> {
     _style = style;
     await addIssueSources(style, bundleToSources(widget.bundle));
     await addIssueLayers(style);
-    final connection = ref.read(connectionProvider);
-    if (connection != null) {
-      await addTrackerIconLayer(style, connection.client);
+    final client = ref.read(connectionManagerProvider).value?.active?.client;
+    if (client != null) {
+      await addTrackerIconLayer(style, client);
     }
     await _fitToBundle();
   }
