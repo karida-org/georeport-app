@@ -182,6 +182,13 @@ class GttSyncClient implements IssueSubmitApi {
     ];
   }
 
+  /// Updates an issue through the stock Redmine REST API. The payload must
+  /// carry lock_version: Redmine's optimistic locking is what keeps a stale
+  /// client from silently overwriting someone else's change.
+  Future<void> updateIssue(int issueId, Map<String, dynamic> payload) async {
+    await _dio.put<void>('/issues/$issueId.json', data: payload);
+  }
+
   /// Logs time on an issue through the contract; runs as the authenticated
   /// user. Returns the created entry. A 422 carries the server's validation
   /// messages in the DioException response.
