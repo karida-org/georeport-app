@@ -20,13 +20,31 @@ import 'detail/journals_section.dart';
 import 'detail/update_sheets.dart';
 import 'issue_providers.dart';
 
-class IssueDetailScreen extends ConsumerWidget {
-  const IssueDetailScreen({required this.issueId, super.key});
+class IssueDetailScreen extends ConsumerStatefulWidget {
+  const IssueDetailScreen({
+    required this.issueId,
+    this.openQuickLog = false,
+    super.key,
+  });
 
   final int issueId;
 
+  /// Opens the quick-log sheet once the document allows it; the timer
+  /// notification's "Log time" action arrives with this set.
+  final bool openQuickLog;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<IssueDetailScreen> createState() => _IssueDetailScreenState();
+}
+
+class _IssueDetailScreenState extends ConsumerState<IssueDetailScreen> {
+  bool _quickLogOpened = false;
+
+  int get issueId => widget.issueId;
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     // Lives on the root navigator, outside the shell and its session guard,
     // so it carries its own: a dead session yields to the connect screen.
     ref.listen(connectionManagerProvider, (previous, next) {
@@ -41,6 +59,20 @@ class IssueDetailScreen extends ConsumerWidget {
     final canLogTime =
         ref.watch(timeCapabilitiesProvider).canCreate &&
         (document.value?.editable.canLogTime ?? false);
+    // The notification's "Log time" action: open the sheet once, as soon
+    // as the loaded document confirms logging is allowed here.
+    if (widget.openQuickLog &&
+        !_quickLogOpened &&
+        canLogTime &&
+        document.value != null) {
+      _quickLogOpened = true;
+      final projectId = document.value!.project.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          showQuickLogSheet(context, issueId: issueId, projectId: projectId);
+        }
+      });
+    }
     // Rebuild on timer changes so the play/pause toggle tracks state.
     ref.watch(timersProvider);
     final timer = ref.read(timersProvider.notifier).timerFor(issueId);

@@ -226,5 +226,7 @@
   "settingsLicenseLine": "GPL-3.0-or-later のフリーソフトウェアです。",
   "settingsSourceCode": "ソースコード",
   "settingsOssLicenses": "オープンソースライセンス",
-  "issueShareTooltip": "共有"
+  "issueShareTooltip": "共有",
+  "timerNotificationChannelName": "実行中のタイマー",
+  "timerNotificationChannelDescription": "タイマーの実行中に通知でお知らせします。"
 }
