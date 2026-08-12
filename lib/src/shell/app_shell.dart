@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -10,7 +12,7 @@ import '../features/issues/sync_status.dart';
 import '../net/connectivity.dart';
 import 'bottom_bar.dart';
 
-enum _MenuAction { switchInstance }
+enum _MenuAction { settings, switchInstance }
 
 /// The signed-in scaffold: one branded app bar (mark + wordmark, overflow
 /// menu) and the five-slot bottom bar over the stateful shell branches.
@@ -55,6 +57,10 @@ class AppShell extends ConsumerWidget {
             tooltip: l10n.navMenuTooltip,
             onSelected: (action) async {
               switch (action) {
+                case _MenuAction.settings:
+                  // The push future completes when the screen pops; nothing
+                  // to do with it here.
+                  unawaited(context.push('/settings'));
                 case _MenuAction.switchInstance:
                   await ref
                       .read(connectionManagerProvider.notifier)
@@ -84,6 +90,14 @@ class AppShell extends ConsumerWidget {
                   child: _syncStatusTile(context, ref, l10n, sync),
                 ),
               if (active != null) const PopupMenuDivider(),
+              PopupMenuItem<_MenuAction>(
+                value: _MenuAction.settings,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.settings_outlined),
+                  title: Text(l10n.settingsTitle),
+                ),
+              ),
               PopupMenuItem<_MenuAction>(
                 value: _MenuAction.switchInstance,
                 child: ListTile(

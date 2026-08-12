@@ -27,6 +27,7 @@ dependencies:
   intl: any
   latlong2: ^0.10.1
   maplibre: ^0.3.5
+  package_info_plus: ^10.2.1
   path_provider: ^2.1.6
   shared_preferences: ^2.5.4
   url_launcher: ^6.3.2
@@ -44,6 +45,8 @@ flutter:
   generate: true
   assets:
     - assets/brand/
+    # The bundled fonts' license, registered into the LicenseRegistry.
+    - fonts/OFL.txt
   fonts:
     - family: IBMPlexSans
       fonts:

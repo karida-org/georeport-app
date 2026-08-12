@@ -25,6 +25,17 @@ class CaptureDefaults {
     await _prefs.setInt(_projectKey, projectId);
     await _prefs.setInt(_trackerKey(projectId), trackerId);
   }
+
+  /// Forgets everything remembered: the last project and every per-project
+  /// tracker. The next capture starts from a clean slate.
+  Future<void> clear() async {
+    final keys = await _prefs.getKeys();
+    for (final key in keys) {
+      if (key.startsWith('capture.')) {
+        await _prefs.remove(key);
+      }
+    }
+  }
 }
 
 final captureDefaultsProvider = Provider<CaptureDefaults>(
