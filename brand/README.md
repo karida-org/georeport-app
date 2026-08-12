@@ -9,9 +9,15 @@ Material themes live in `lib/src/theme.dart`.
 Both generators read their configuration from `pubspec.yaml`:
 
 ```bash
+flutter pub get
 dart run flutter_launcher_icons
 dart run flutter_native_splash:create
 ```
+
+Note: `flutter_launcher_icons` is known to overwrite the boolean
+`ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` build setting
+in `ios/Runner.xcodeproj/project.pbxproj` with `AppIcon`; restore it to
+`YES` after regenerating.
 
 `app-icon-play-512.png` is the Play Store listing icon; it is not used by
 the generators.

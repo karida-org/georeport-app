@@ -45,6 +45,10 @@ final georeportLightTheme = ThemeData(
       textStyle: const TextStyle(fontWeight: FontWeight.w600),
     ),
   ),
+  // Deliberate brand exception: outlined buttons are the neutral secondary
+  // action (ink on a hairline border). The "buttons stay green" rule keeps
+  // the report red out of interactive elements; primary actions carry the
+  // green through FilledButton.
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: GeoreportColors.ink,
