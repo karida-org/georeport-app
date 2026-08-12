@@ -71,6 +71,7 @@ class IssuesListView extends ConsumerWidget {
         final metaParts = [
           ?trackerName,
           ?statusName,
+          ?summary.priority,
           if (projectNames[summary.projectId] case final String name) name,
           if (summary.assignedTo case final String assignee) assignee,
         ];
@@ -88,17 +89,22 @@ class IssuesListView extends ConsumerWidget {
           ),
           title: Text('#${summary.id} ${summary.subject}'),
           subtitle: Text(metaParts.join(' · ')),
-          trailing: issue.isPlaced
-              ? (dueDate == null
-                    ? null
-                    : Text(
-                        dateFormat.format(dueDate),
-                        style: TextStyle(
-                          color: overdue ? theme.colorScheme.error : null,
-                          fontWeight: overdue ? FontWeight.bold : null,
-                        ),
-                      ))
-              : Text(l10n.issuesUnplaced),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (dueDate != null)
+                Text(
+                  dateFormat.format(dueDate),
+                  style: TextStyle(
+                    color: overdue ? theme.colorScheme.error : null,
+                    fontWeight: overdue ? FontWeight.bold : null,
+                  ),
+                ),
+              if (!issue.isPlaced)
+                Text(l10n.issuesUnplaced, style: theme.textTheme.labelSmall),
+            ],
+          ),
           onTap: () => context.go('/issues/${summary.id}'),
         );
       },
