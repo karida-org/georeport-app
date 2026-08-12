@@ -169,7 +169,11 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
           // Rebuild on every edit: the Continue button's enabled state
           // follows the field, and an URL change invalidates a prior probe.
           onChanged: (_) => setState(() => _probed = null),
-          onSubmitted: (_) => _probe(),
+          onSubmitted: (_) {
+            if (!_busy && _urlController.text.trim().isNotEmpty) {
+              _probe();
+            }
+          },
         ),
         const SizedBox(height: 16),
         if (probed == null)

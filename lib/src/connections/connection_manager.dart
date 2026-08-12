@@ -195,9 +195,13 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       );
       client = _oauthClient(connection, config, tokens);
     } else {
+      final apiKey = secret['api_key'];
+      if (apiKey is! String || apiKey.isEmpty) {
+        throw StateError('No stored credentials for ${connection.label}');
+      }
       client = GttSyncClient(
         baseUrl: connection.baseUrl,
-        auth: ApiKeyAuth(secret['api_key'] as String? ?? ''),
+        auth: ApiKeyAuth(apiKey),
       );
     }
     final capabilities = await client.capabilities();
