@@ -26,8 +26,9 @@ typedef ImageShrinker =
 /// filename and content type. Any failure falls back to the original bytes;
 /// an oversized upload beats a lost report.
 Future<Uint8List> shrinkForUpload(Uint8List bytes, String? contentType) async {
+  final type = contentType?.split(';').first.trim().toLowerCase();
   if (bytes.lengthInBytes <= uploadMaxKb * 1024 ||
-      contentType != 'image/jpeg') {
+      (type != 'image/jpeg' && type != 'image/jpg')) {
     return bytes;
   }
   try {

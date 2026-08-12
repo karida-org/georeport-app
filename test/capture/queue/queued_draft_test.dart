@@ -28,6 +28,7 @@ QueuedDraft sampleDraft() => QueuedDraft(
   ],
   state: QueuedDraftState.creating,
   attempts: 2,
+  tokenResets: 1,
   nextAttemptAt: DateTime.utc(2026, 8, 12, 5, 5),
   lastError: 'timeout',
 );
@@ -51,6 +52,7 @@ void main() {
     expect(revived.photos.last.token, isNull);
     expect(revived.state, QueuedDraftState.creating);
     expect(revived.attempts, 2);
+    expect(revived.tokenResets, 1);
     expect(revived.nextAttemptAt, draft.nextAttemptAt);
     expect(revived.lastError, 'timeout');
   });

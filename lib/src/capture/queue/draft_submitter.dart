@@ -60,6 +60,7 @@ class DraftSubmitter {
       if (current.state == QueuedDraftState.creating) {
         final existing = await _findExisting(current);
         if (existing != null) {
+          await _store.claimIssue(existing);
           return SubmitCreated(existing);
         }
         // Provably not created; safe to continue as a normal attempt.
@@ -79,9 +80,22 @@ class DraftSubmitter {
       }
       current = current.copyWith(state: QueuedDraftState.creating);
       await _store.save(current);
-      return SubmitCreated(await _api.createIssue(current.payload()));
+      final issueId = await _api.createIssue(current.payload());
+      await _store.claimIssue(issueId);
+      return SubmitCreated(issueId);
     } on DioException catch (error) {
       return _classify(current, error);
+      // A non-network failure (missing photo file, undecodable image,
+      // malformed server payload) cannot heal through retries; leaving it
+      // due would poison the queue and stall every later entry.
+      // ignore: avoid_catches_without_on_clauses
+    } catch (error) {
+      final failed = current.copyWith(
+        state: QueuedDraftState.failed,
+        lastError: '$error',
+      );
+      await _store.save(failed);
+      return SubmitFailed(failed);
     }
   }
 
@@ -90,8 +104,12 @@ class DraftSubmitter {
       projectId: draft.projectId,
       since: draft.createdAt.subtract(_dedupSkew),
     );
+    // Ids this device already created or adopted are spoken for; without
+    // this, two same-subject drafts could both resolve to one issue.
+    final claimed = await _store.claimedIssues();
     for (final candidate in candidates) {
-      if (candidate.subject == draft.subject) {
+      if (candidate.subject == draft.subject &&
+          !claimed.contains(candidate.id)) {
         return candidate.id;
       }
     }
@@ -109,29 +127,46 @@ class DraftSubmitter {
     }
     final status = error.response?.statusCode;
     if (status == 422) {
-      final errors = _validationErrors(error);
-      // A stale or invalid attachment token (Redmine purges unattached
-      // uploads): drop the tokens and upload again next round.
-      if (errors.any((message) => message.toLowerCase().contains('attach'))) {
+      // A 422 on a payload that carries upload tokens may just mean the
+      // tokens went stale (Redmine purges unattached uploads). Validation
+      // messages are localized, so the condition is detected structurally:
+      // reset the tokens and retry once with fresh uploads; a second 422
+      // is a real rejection.
+      final hasTokens = draft.photos.any((photo) => photo.token != null);
+      if (hasTokens && draft.tokenResets == 0) {
         final reset = draft.copyWith(
           photos: [for (final photo in draft.photos) photo.withToken(null)],
+          tokenResets: 1,
           state: QueuedDraftState.pending,
         );
         return SubmitRetryLater(
           await _retryLater(reset, error, provenUnsent: true),
         );
       }
-      final failed = draft.copyWith(
-        state: QueuedDraftState.failed,
-        lastError: errors.isEmpty ? 'HTTP 422' : errors.join('; '),
-      );
-      await _store.save(failed);
-      return SubmitFailed(failed);
+      return _fail(draft, error);
     }
-    // Everything else (timeouts after sending, 5xx, lost responses) leaves
-    // the outcome unknown; the state on disk decides whether the next round
-    // runs the dedup check first.
+    // Other non-retryable client errors: permission lost (403), project
+    // gone (404), malformed request (400). Retrying cannot fix these; the
+    // user has to act.
+    if (status == 400 || status == 403 || status == 404 || status == 410) {
+      return _fail(draft, error);
+    }
+    // Everything else (timeouts after sending, 5xx, lost responses, auth
+    // hiccups) leaves the outcome unknown; the state on disk decides
+    // whether the next round runs the dedup check first.
     return SubmitRetryLater(await _retryLater(draft, error));
+  }
+
+  Future<SubmitFailed> _fail(QueuedDraft draft, DioException error) async {
+    final errors = _validationErrors(error);
+    final failed = draft.copyWith(
+      state: QueuedDraftState.failed,
+      lastError: errors.isEmpty
+          ? 'HTTP ${error.response?.statusCode}'
+          : errors.join('; '),
+    );
+    await _store.save(failed);
+    return SubmitFailed(failed);
   }
 
   Future<QueuedDraft> _retryLater(

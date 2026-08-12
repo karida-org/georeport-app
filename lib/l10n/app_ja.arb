@@ -74,6 +74,7 @@
   "captureLocationDenied": "位置情報の利用が許可されていません。",
   "captureLocationFailed": "現在地を取得できませんでした。",
   "captureQueuedOffline": "送信トレイに保存しました。オンラインに戻ると自動的に送信されます。",
+  "captureNotConnected": "接続されていません。再度サインインしてから送信してください。",
   "outboxTitle": "送信トレイ",
   "outboxEmpty": "送信待ちのレポートはありません。",
   "outboxBannerWaiting": "{count, plural, other{{count}件のレポートが送信待ちです}}",

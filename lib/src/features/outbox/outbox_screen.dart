@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../capture/queue/queued_draft.dart';
 import '../../capture/queue/upload_queue.dart';
+import '../../connections/connection_manager.dart';
 
 /// Reports waiting to reach the server: their state, the last error, and
 /// manual retry/discard. The queue itself keeps working without this screen;
-/// this is the window into it.
+/// this is the window into it. Shows only the active connection's entries,
+/// matching what the queue is able to process.
 class OutboxScreen extends ConsumerWidget {
   const OutboxScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Same state-driven session guard as the other authenticated screens.
+    ref.listen(connectionManagerProvider, (previous, next) {
+      if (next.value != null && next.value!.active == null) {
+        context.go('/');
+      }
+    });
     final l10n = AppLocalizations.of(context);
-    final entries = ref.watch(uploadQueueProvider).value ?? const [];
+    final entries = ref.watch(activeOutboxEntriesProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.outboxTitle)),
       body: entries.isEmpty

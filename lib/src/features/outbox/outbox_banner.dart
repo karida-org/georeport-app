@@ -14,7 +14,7 @@ class OutboxBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final entries = ref.watch(uploadQueueProvider).value ?? const [];
+    final entries = ref.watch(activeOutboxEntriesProvider);
     if (entries.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -23,12 +23,17 @@ class OutboxBanner extends ConsumerWidget {
         .where((entry) => entry.state == QueuedDraftState.failed)
         .length;
     final scheme = Theme.of(context).colorScheme;
+    final onColor = failed > 0
+        ? scheme.onErrorContainer
+        : scheme.onSecondaryContainer;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Card(
         color: failed > 0 ? scheme.errorContainer : scheme.secondaryContainer,
         child: ListTile(
           dense: true,
+          iconColor: onColor,
+          textColor: onColor,
           leading: Icon(
             failed > 0 ? Icons.error_outline : Icons.cloud_upload_outlined,
           ),

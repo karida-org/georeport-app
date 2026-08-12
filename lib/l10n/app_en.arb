@@ -164,6 +164,7 @@
   "captureLocationDenied": "Location permission was not granted.",
   "captureLocationFailed": "Could not get your location.",
   "captureQueuedOffline": "Saved to outbox. It will upload automatically when you are back online.",
+  "captureNotConnected": "Not connected. Sign in again to submit this report.",
   "outboxTitle": "Outbox",
   "outboxEmpty": "Nothing waiting to upload.",
   "outboxBannerWaiting": "{count, plural, =1{1 report waiting to upload} other{{count} reports waiting to upload}}",

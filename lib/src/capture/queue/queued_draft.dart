@@ -68,6 +68,7 @@ class QueuedDraft {
     this.photos = const [],
     this.state = QueuedDraftState.pending,
     this.attempts = 0,
+    this.tokenResets = 0,
     this.nextAttemptAt,
     this.lastError,
   });
@@ -108,6 +109,7 @@ class QueuedDraft {
           QueuedDraftState.values.asNameMap()[json['state']] ??
           QueuedDraftState.pending,
       attempts: (json['attempts'] as num?)?.toInt() ?? 0,
+      tokenResets: (json['token_resets'] as num?)?.toInt() ?? 0,
       nextAttemptAt: DateTime.tryParse(
         json['next_attempt_at'] as String? ?? '',
       )?.toUtc(),
@@ -127,13 +129,17 @@ class QueuedDraft {
   final List<QueuedPhoto> photos;
   final QueuedDraftState state;
   final int attempts;
+
+  /// How often the attachment tokens were reset after a 422, so a server
+  /// that keeps rejecting the uploads cannot loop forever.
+  final int tokenResets;
   final DateTime? nextAttemptAt;
   final String? lastError;
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'connection_id': connectionId,
-    'created_at': createdAt.toIso8601String(),
+    'created_at': createdAt.toUtc().toIso8601String(),
     'project_id': projectId,
     'tracker_id': trackerId,
     'subject': subject,
@@ -149,8 +155,9 @@ class QueuedDraft {
     'photos': [for (final photo in photos) photo.toJson()],
     'state': state.name,
     'attempts': attempts,
+    'token_resets': tokenResets,
     if (nextAttemptAt case final DateTime at)
-      'next_attempt_at': at.toIso8601String(),
+      'next_attempt_at': at.toUtc().toIso8601String(),
     if (lastError != null) 'last_error': lastError,
   };
 
@@ -158,6 +165,7 @@ class QueuedDraft {
     List<QueuedPhoto>? photos,
     QueuedDraftState? state,
     int? attempts,
+    int? tokenResets,
     DateTime? nextAttemptAt,
     String? lastError,
     bool clearNextAttempt = false,
@@ -175,6 +183,7 @@ class QueuedDraft {
     photos: photos ?? this.photos,
     state: state ?? this.state,
     attempts: attempts ?? this.attempts,
+    tokenResets: tokenResets ?? this.tokenResets,
     nextAttemptAt: clearNextAttempt
         ? null
         : (nextAttemptAt ?? this.nextAttemptAt),

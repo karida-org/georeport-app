@@ -251,6 +251,12 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           context.go('/issues');
         }
       }
+    } on StateError {
+      // The queue refuses to enqueue without an active session; the guard
+      // in build() is about to redirect, so keep the message readable.
+      if (mounted) {
+        setState(() => _error = l10n.captureNotConnected);
+      }
       // The draft survives any failure; only success leaves the screen.
       // ignore: avoid_catches_without_on_clauses
     } catch (error) {

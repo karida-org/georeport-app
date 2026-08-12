@@ -76,11 +76,15 @@ class DraftStore {
     return queued;
   }
 
+  /// Atomic: written to a sidecar and renamed into place, so a kill during
+  /// the write can never truncate a record (and its upload tokens) away.
+  /// The `.tmp` suffix keeps half-written files out of [list]'s json filter.
   Future<void> save(QueuedDraft draft) async {
     _root.createSync(recursive: true);
-    await _jsonFile(
-      draft.id,
-    ).writeAsString(jsonEncode(draft.toJson()), flush: true);
+    final target = _jsonFile(draft.id);
+    final temp = File('${target.path}.tmp');
+    await temp.writeAsString(jsonEncode(draft.toJson()), flush: true);
+    await temp.rename(target.path);
   }
 
   Future<Uint8List> readPhoto(QueuedDraft draft, QueuedPhoto photo) =>
@@ -95,5 +99,52 @@ class DraftStore {
     if (photos.existsSync()) {
       await photos.delete(recursive: true);
     }
+  }
+
+  /// Reclaims photo directories left behind by an interrupted [add] or
+  /// [remove]; photos are large, so orphans must not accumulate.
+  Future<void> sweepOrphans() async {
+    if (!_root.existsSync()) {
+      return;
+    }
+    await for (final entity in _root.list()) {
+      if (entity is Directory &&
+          !_jsonFile(entity.path.split('/').last).existsSync()) {
+        await entity.delete(recursive: true);
+      }
+    }
+  }
+
+  File get _claimedFile => File('${_root.path}/claimed_issues.ledger');
+
+  /// Issue ids this device already created or adopted. The dedup check for
+  /// an interrupted create must never adopt one of these, otherwise two
+  /// same-subject drafts could both resolve to the same issue and one
+  /// report would silently vanish.
+  Future<List<int>> claimedIssues() async {
+    try {
+      if (!_claimedFile.existsSync()) {
+        return const [];
+      }
+      final decoded = jsonDecode(await _claimedFile.readAsString());
+      return decoded is List
+          ? decoded.whereType<num>().map((id) => id.toInt()).toList()
+          : const [];
+    } on Exception {
+      return const [];
+    }
+  }
+
+  Future<void> claimIssue(int issueId) async {
+    _root.createSync(recursive: true);
+    final claimed = await claimedIssues();
+    if (claimed.contains(issueId)) {
+      return;
+    }
+    // Only recent ids matter (the dedup window is minutes); keep it bounded.
+    final updated = [...claimed, issueId].reversed.take(200).toList().reversed;
+    final temp = File('${_claimedFile.path}.tmp');
+    await temp.writeAsString(jsonEncode(updated.toList()), flush: true);
+    await temp.rename(_claimedFile.path);
   }
 }

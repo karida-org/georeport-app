@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models/project_schema.dart';
@@ -19,18 +18,34 @@ final projectSchemaProvider = FutureProvider.autoDispose
           ?.connection
           .id;
       final cache = await ref.watch(schemaCacheProvider.future);
-      try {
-        final json = await client.projectSchemaJson(projectId);
-        if (connectionId != null) {
-          await cache.write(connectionId, projectId, json);
-        }
-        return ProjectSchema.fromJson(json);
-      } on DioException {
+
+      Future<ProjectSchema?> fromCache() async {
         final cached = connectionId == null
             ? null
             : await cache.read(connectionId, projectId);
+        return cached == null ? null : ProjectSchema.fromJson(cached);
+      }
+
+      try {
+        final json = await client.projectSchemaJson(projectId);
+        final schema = ProjectSchema.fromJson(json);
+        // A trackerless schema is what a captive portal's 200-with-HTML
+        // answer parses to: never let it replace a known-good cache, and
+        // prefer the cache over an unusable form.
+        if (schema.trackers.isEmpty) {
+          return await fromCache() ?? schema;
+        }
+        if (connectionId != null) {
+          await cache.write(connectionId, projectId, json);
+        }
+        return schema;
+        // The fallback must also cover parse failures on an unexpected
+        // response shape, which throw TypeError, not DioException.
+        // ignore: avoid_catches_without_on_clauses
+      } catch (_) {
+        final cached = await fromCache();
         if (cached != null) {
-          return ProjectSchema.fromJson(cached);
+          return cached;
         }
         rethrow;
       }

@@ -26,6 +26,25 @@ final connectivityChangesProvider = StreamProvider<List<ConnectivityResult>>(
 final uploadQueueProvider =
     AsyncNotifierProvider<UploadQueue, List<QueuedDraft>>(UploadQueue.new);
 
+/// Outbox entries belonging to the active connection: the slice the UI
+/// shows and the queue processes. Entries of other saved connections wait
+/// on disk until their connection becomes active again.
+final activeOutboxEntriesProvider = Provider.autoDispose<List<QueuedDraft>>((
+  ref,
+) {
+  final activeId = ref
+      .watch(connectionManagerProvider)
+      .value
+      ?.active
+      ?.connection
+      .id;
+  final entries = ref.watch(uploadQueueProvider).value ?? const [];
+  return [
+    for (final entry in entries)
+      if (entry.connectionId == activeId) entry,
+  ];
+});
+
 /// Owns the outbox lifecycle: entries enter on submit, get processed with
 /// backoff whenever the app starts, connectivity returns, or the user asks,
 /// and leave once the issue exists on the server.
@@ -46,10 +65,17 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
       }
     });
     ref.onDispose(() => _timer?.cancel());
-    // Entries left over from a previous run start moving right away.
-    unawaited(Future.microtask(process));
-    return store.list();
+    await store.sweepOrphans();
+    final initial = await store.list();
+    // Entries left over from a previous run start moving right away. An
+    // event-queue task runs after Riverpod has committed the build result,
+    // so process() never touches state mid-build.
+    unawaited(Future(process));
+    return initial;
   }
+
+  String? get _activeConnectionId =>
+      ref.read(connectionManagerProvider).value?.active?.connection.id;
 
   /// Submits a fresh draft: persist first, then try immediately.
   /// Returns the new issue id when it went through right now, or null when
@@ -84,45 +110,69 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
       case SubmitRetryLater():
         _scheduleNextRun();
         return null;
-      case SubmitFailed(:final draft):
-        await store.remove(draft.id);
+      case SubmitFailed(draft: final rejected):
+        await store.remove(rejected.id);
         await _refresh();
-        throw QueueSubmitException(draft.lastError ?? 'Rejected');
+        throw QueueSubmitException(rejected.lastError ?? 'Rejected');
       case null:
+        // Another pass holds the lock; it works from an older snapshot, so
+        // make sure this new entry gets a timer of its own.
+        _scheduleNextRun();
         return null;
     }
   }
 
   /// Processes every due entry of the active connection, oldest first.
+  /// One bad entry never blocks the rest, and the next run is always
+  /// scheduled, whatever happens.
   Future<void> process() async {
     final store = _store;
     if (store == null || _processing) {
       return;
     }
     _processing = true;
+    var createdAny = false;
     try {
-      final activeId = ref
-          .read(connectionManagerProvider)
-          .value
-          ?.active
-          ?.connection
-          .id;
+      final activeId = _activeConnectionId;
       if (activeId == null) {
         return;
       }
       final now = DateTime.now().toUtc();
-      for (final entry in await store.list()) {
-        if (entry.connectionId != activeId ||
-            entry.state == QueuedDraftState.failed ||
-            (entry.nextAttemptAt?.isAfter(now) ?? false)) {
+      for (final snapshot in await store.list()) {
+        if (snapshot.connectionId != activeId ||
+            snapshot.state == QueuedDraftState.failed ||
+            (snapshot.nextAttemptAt?.isAfter(now) ?? false)) {
           continue;
         }
-        await _processOne(entry, ownsLock: true);
+        // Reload by id: the user can discard an entry from the outbox
+        // while this pass runs.
+        final entry = (await store.list())
+            .where((d) => d.id == snapshot.id)
+            .firstOrNull;
+        if (entry == null) {
+          continue;
+        }
+        try {
+          final result = await _processOne(
+            entry,
+            ownsLock: true,
+            invalidateIssues: false,
+          );
+          createdAny = createdAny || result is SubmitCreated;
+          // The submitter classifies everything it can; anything that still
+          // escapes must not take the rest of the queue down with it.
+          // ignore: avoid_catches_without_on_clauses
+        } catch (_) {
+          continue;
+        }
       }
     } finally {
       _processing = false;
+      if (createdAny) {
+        ref.invalidate(issuesProvider);
+      }
+      _scheduleNextRun();
     }
-    _scheduleNextRun();
   }
 
   /// Manual retry from the outbox UI; also revives failed entries.
@@ -132,7 +182,8 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
       return;
     }
     final entry = (await store.list()).where((d) => d.id == id).firstOrNull;
-    if (entry == null) {
+    // Never submit a draft to a connection it was not captured for.
+    if (entry == null || entry.connectionId != _activeConnectionId) {
       return;
     }
     final revived = entry.state == QueuedDraftState.failed
@@ -156,6 +207,7 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
   Future<SubmitResult?> _processOne(
     QueuedDraft entry, {
     bool ownsLock = false,
+    bool invalidateIssues = true,
   }) async {
     final store = _store;
     final client = ref.read(connectionManagerProvider).value?.active?.client;
@@ -173,7 +225,9 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
       final result = await submitter.process(entry);
       if (result is SubmitCreated) {
         await store.remove(entry.id);
-        ref.invalidate(issuesProvider);
+        if (invalidateIssues) {
+          ref.invalidate(issuesProvider);
+        }
       }
       await _refresh();
       return result;
@@ -193,10 +247,12 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
 
   void _scheduleNextRun() {
     _timer?.cancel();
+    final activeId = _activeConnectionId;
     final entries = state.value ?? const [];
     final due = [
       for (final entry in entries)
-        if (entry.state != QueuedDraftState.failed)
+        if (entry.state != QueuedDraftState.failed &&
+            entry.connectionId == activeId)
           entry.nextAttemptAt ?? DateTime.now().toUtc(),
     ];
     if (due.isEmpty) {
@@ -204,7 +260,7 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
     }
     due.sort();
     var wait = due.first.difference(DateTime.now().toUtc());
-    if (wait.isNegative) {
+    if (wait < const Duration(seconds: 5)) {
       wait = const Duration(seconds: 5);
     }
     _timer = Timer(wait, () => unawaited(process()));

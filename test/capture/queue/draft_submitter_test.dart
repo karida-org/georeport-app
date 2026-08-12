@@ -213,7 +213,7 @@ void main() {
   );
 
   test(
-    'a stale attachment token clears the tokens for a fresh upload',
+    'a 422 on a payload with tokens clears them for one fresh upload',
     () async {
       api.onCreate = () => throw dioError(
         DioExceptionType.badResponse,
@@ -229,6 +229,79 @@ void main() {
       final persisted = (await store.list()).single;
       expect(persisted.state, QueuedDraftState.pending);
       expect(persisted.photos.every((photo) => photo.token == null), isTrue);
+      expect(persisted.tokenResets, 1);
     },
   );
+
+  test(
+    'a server that keeps rejecting with 422 fails after one token reset',
+    () async {
+      api.onCreate = () => throw dioError(
+        DioExceptionType.badResponse,
+        status: 422,
+        data: {
+          'errors': ['Attachment is invalid'],
+        },
+      );
+
+      final first = await submitter.process(await queued());
+      expect(first, isA<SubmitRetryLater>());
+
+      final second = await submitter.process((await store.list()).single);
+      expect(second, isA<SubmitFailed>());
+      expect((await store.list()).single.state, QueuedDraftState.failed);
+    },
+  );
+
+  test(
+    'a 403 is permanent: retrying cannot restore a lost permission',
+    () async {
+      api.onCreate = () =>
+          throw dioError(DioExceptionType.badResponse, status: 403);
+
+      final result = await submitter.process(await queued(photos: 0));
+      expect(result, isA<SubmitFailed>());
+      expect((await store.list()).single.state, QueuedDraftState.failed);
+    },
+  );
+
+  test(
+    'a missing photo file becomes a terminal failure, not a poison entry',
+    () async {
+      final draft = await queued(photos: 1);
+      File('${root.path}/${draft.id}/photo_0').deleteSync();
+
+      final result = await submitter.process(draft);
+      expect(result, isA<SubmitFailed>());
+      expect((await store.list()).single.state, QueuedDraftState.failed);
+      expect(api.creates, 0);
+    },
+  );
+
+  test('two same-subject drafts never adopt the same created issue', () async {
+    api.onCreate = () => throw dioError(DioExceptionType.receiveTimeout);
+    final a = await queued(photos: 0);
+    final b = await queued(photos: 0);
+    await submitter.process(a);
+    await submitter.process(b);
+
+    // The server actually created one issue for the interrupted requests.
+    api.onCreate = null;
+    api.existing = const [(id: 4242, subject: 'Pothole at the gate')];
+
+    final drafts = await store.list();
+    final retryA = await submitter.process(
+      drafts.firstWhere((d) => d.id == a.id),
+    );
+    final retryB = await submitter.process(
+      drafts.firstWhere((d) => d.id == b.id),
+    );
+
+    expect((retryA as SubmitCreated).issueId, 4242);
+    expect(
+      (retryB as SubmitCreated).issueId,
+      99,
+      reason: 'the second draft must not adopt the issue the first claimed',
+    );
+  });
 }

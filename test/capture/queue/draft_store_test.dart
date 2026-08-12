@@ -64,6 +64,27 @@ void main() {
     expect(listed.first.id, 'old');
   });
 
+  test('sweepOrphans removes photo directories without a record', () async {
+    final kept = await store.add(entry('kept'), [
+      DraftPhoto(filename: 'k.jpg', bytes: Uint8List.fromList([1])),
+    ]);
+    Directory('${root.path}/orphan').createSync(recursive: true);
+
+    await store.sweepOrphans();
+
+    expect(Directory('${root.path}/orphan').existsSync(), isFalse);
+    expect(await store.readPhoto(kept, kept.photos.single), isNotEmpty);
+  });
+
+  test('claimed issue ids persist and stay out of the draft list', () async {
+    await store.claimIssue(7);
+    await store.claimIssue(7);
+    await store.claimIssue(9);
+
+    expect(await store.claimedIssues(), [7, 9]);
+    expect(await store.list(), isEmpty);
+  });
+
   test('remove deletes the record and its photo directory', () async {
     final queued = await store.add(entry('gone'), [
       DraftPhoto(filename: 'x.jpg', bytes: Uint8List.fromList([9])),
