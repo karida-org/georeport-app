@@ -121,54 +121,16 @@ class _ConnectionTile extends ConsumerWidget {
   }
 
   Future<String?> _promptApiKey(BuildContext context, AppLocalizations l10n) {
-    final controller = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.connectNewApiKeyTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          obscureText: true,
-          decoration: InputDecoration(labelText: l10n.connectApiKeyLabel),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancelButton),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: Text(l10n.connectReauthAction),
-          ),
-        ],
-      ),
+      builder: (context) => const _TextPromptDialog.apiKey(),
     );
   }
 
   Future<void> _rename(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context);
-    final controller = TextEditingController(text: connection.label);
     final label = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.connectRenameTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(labelText: l10n.connectRenameLabel),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancelButton),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: Text(l10n.saveButton),
-          ),
-        ],
-      ),
+      builder: (context) => _TextPromptDialog.rename(initial: connection.label),
     );
     if (label != null && label.trim().isNotEmpty) {
       await ref
@@ -199,5 +161,66 @@ class _ConnectionTile extends ConsumerWidget {
     if (confirmed ?? false) {
       await ref.read(connectionManagerProvider.notifier).remove(connection.id);
     }
+  }
+}
+
+/// A one-field prompt owning its controller's lifecycle. API-key mode
+/// obscures input and disables autocorrect/suggestions so the secret never
+/// enters keyboard learning.
+class _TextPromptDialog extends StatefulWidget {
+  const _TextPromptDialog.apiKey() : initial = '', isSecret = true;
+
+  const _TextPromptDialog.rename({required this.initial}) : isSecret = false;
+
+  final String initial;
+  final bool isSecret;
+
+  @override
+  State<_TextPromptDialog> createState() => _TextPromptDialogState();
+}
+
+class _TextPromptDialogState extends State<_TextPromptDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initial,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(
+        widget.isSecret ? l10n.connectNewApiKeyTitle : l10n.connectRenameTitle,
+      ),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        obscureText: widget.isSecret,
+        autocorrect: !widget.isSecret,
+        enableSuggestions: !widget.isSecret,
+        decoration: InputDecoration(
+          labelText: widget.isSecret
+              ? l10n.connectApiKeyLabel
+              : l10n.connectRenameLabel,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancelButton),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: Text(
+            widget.isSecret ? l10n.connectReauthAction : l10n.saveButton,
+          ),
+        ),
+      ],
+    );
   }
 }

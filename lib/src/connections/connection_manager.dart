@@ -139,18 +139,24 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       return;
     }
     final active = await _activate(connection);
+    // The activation round trip can race a removal; commit against the
+    // list as it is NOW, and only if the connection still exists.
+    final latest = state.value ?? current!;
+    if (!latest.connections.any((c) => c.id == connectionId)) {
+      return;
+    }
     await _store.saveActiveId(connection.id);
     state = AsyncData(
-      ConnectionsState(connections: current!.connections, active: active),
+      ConnectionsState(connections: latest.connections, active: active),
     );
   }
 
   /// Renames a saved connection; the id, credentials, and everything else
-  /// stay untouched.
+  /// stay untouched. A connection removed in the meantime is left alone.
   Future<void> rename(String connectionId, String label) async {
     final current = state.value;
     final trimmed = label.trim();
-    if (current == null || trimmed.isEmpty) {
+    if (current == null || trimmed.isEmpty || _saved(connectionId) == null) {
       return;
     }
     final connections = [
@@ -197,6 +203,11 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       );
     }
     final tokens = await ref.read(oauthFlowProvider).authorize(config);
+    // The browser flow takes long enough for a concurrent removal; never
+    // write credentials for a connection that no longer exists.
+    if (_saved(connectionId) == null) {
+      return;
+    }
     await _persistOAuthSecret(connectionId, config, tokens);
     await activate(connectionId);
   }
@@ -213,6 +224,9 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       auth: ApiKeyAuth(apiKey),
     );
     await client.validateAuth();
+    if (_saved(connectionId) == null) {
+      return;
+    }
     await _store.writeSecret(connectionId, {
       'kind': 'api_key',
       'api_key': apiKey,
