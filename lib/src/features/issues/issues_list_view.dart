@@ -107,7 +107,7 @@ class IssuesListView extends ConsumerWidget {
                 Text(l10n.issuesUnplaced, style: theme.textTheme.labelSmall),
             ],
           ),
-          onTap: () => context.go('/issues/${summary.id}'),
+          onTap: () => context.push('/issues/${summary.id}'),
         );
       },
     );

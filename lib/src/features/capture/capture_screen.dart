@@ -290,7 +290,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           messenger.showSnackBar(
             SnackBar(content: Text(l10n.captureCreated(issueId))),
           );
-          context.go('/issues/$issueId');
+          context.pushReplacement('/issues/$issueId');
         } else {
           messenger.showSnackBar(
             SnackBar(content: Text(l10n.captureQueuedOffline)),
