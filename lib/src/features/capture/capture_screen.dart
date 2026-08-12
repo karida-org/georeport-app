@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,7 +37,11 @@ enum _LocationSource { manual, exif, device }
 /// The capture flow: photos first, then a minimal schema-driven form.
 /// Required fields surface automatically; everything optional folds away.
 class CaptureScreen extends ConsumerStatefulWidget {
-  const CaptureScreen({super.key});
+  const CaptureScreen({this.initialPhotoPaths = const [], super.key});
+
+  /// Image files to attach on open: the Android share target lands here
+  /// with the shared photos already copied into the cache directory.
+  final List<String> initialPhotoPaths;
 
   @override
   ConsumerState<CaptureScreen> createState() => _CaptureScreenState();
@@ -57,10 +64,42 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialPhotoPaths.isNotEmpty) {
+      unawaited(_loadSharedPhotos(widget.initialPhotoPaths));
+    }
+  }
+
+  @override
   void dispose() {
     _subjectController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  /// Attaches images handed over by the share target. Unreadable files are
+  /// skipped; the user still lands on a working capture form.
+  Future<void> _loadSharedPhotos(List<String> paths) async {
+    final photos = <DraftPhoto>[];
+    for (final path in paths) {
+      try {
+        final name = path.split('/').last;
+        final extension = name.split('.').last.toLowerCase();
+        photos.add(
+          DraftPhoto(
+            filename: name,
+            bytes: await File(path).readAsBytes(),
+            contentType: _mimeByExtension[extension],
+          ),
+        );
+      } on Exception {
+        continue;
+      }
+    }
+    if (mounted) {
+      await _ingestPhotos(photos);
+    }
   }
 
   Future<void> _addPhoto(ImageSource source) async {
@@ -69,44 +108,19 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       final images = source == ImageSource.gallery
           ? await _picker.pickMultiImage()
           : [await _picker.pickImage(source: source)].nonNulls.toList();
+      final photos = <DraftPhoto>[];
       for (final image in images) {
-        final bytes = await image.readAsBytes();
         final extension = image.name.split('.').last.toLowerCase();
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _photos.add(
-            DraftPhoto(
-              filename: image.name,
-              bytes: bytes,
-              contentType: image.mimeType ?? _mimeByExtension[extension],
-            ),
-          );
-        });
-        // First geotagged photo wins the location suggestion; the user can
-        // still adjust or clear it.
-        if (_location == null) {
-          final suggested = await exifLocationOf(bytes);
-          if (suggested != null && mounted) {
-            setState(() {
-              _location = suggested;
-              _locationSource = _LocationSource.exif;
-            });
-          }
-        }
+        photos.add(
+          DraftPhoto(
+            filename: image.name,
+            bytes: await image.readAsBytes(),
+            contentType: image.mimeType ?? _mimeByExtension[extension],
+          ),
+        );
       }
-      // No EXIF position on any photo: fall back to where the user stands,
-      // but only when location permission is already granted; a permission
-      // dialog must never interrupt the photo flow uninvited.
-      if (images.isNotEmpty && _location == null && mounted) {
-        final fallback = await currentDeviceLocation();
-        if (fallback != null && mounted && _location == null) {
-          setState(() {
-            _location = fallback;
-            _locationSource = _LocationSource.device;
-          });
-        }
+      if (mounted) {
+        await _ingestPhotos(photos);
       }
       // Camera unavailable, permission denied, unreadable file: platform
       // exceptions here are user-visible situations, not programming errors.
@@ -114,6 +128,39 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     } catch (error) {
       if (mounted) {
         setState(() => _error = l10n.capturePhotoAddFailed('$error'));
+      }
+    }
+  }
+
+  /// The shared intake path for picked and shared photos: attach them, then
+  /// suggest a location from the first geotagged photo, falling back to the
+  /// device position when permission is already granted; a permission
+  /// dialog must never interrupt the photo flow uninvited.
+  Future<void> _ingestPhotos(List<DraftPhoto> photos) async {
+    for (final photo in photos) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _photos.add(photo));
+      // First geotagged photo wins the location suggestion; the user can
+      // still adjust or clear it.
+      if (_location == null) {
+        final suggested = await exifLocationOf(photo.bytes);
+        if (suggested != null && mounted) {
+          setState(() {
+            _location = suggested;
+            _locationSource = _LocationSource.exif;
+          });
+        }
+      }
+    }
+    if (photos.isNotEmpty && _location == null && mounted) {
+      final fallback = await currentDeviceLocation();
+      if (fallback != null && mounted && _location == null) {
+        setState(() {
+          _location = fallback;
+          _locationSource = _LocationSource.device;
+        });
       }
     }
   }

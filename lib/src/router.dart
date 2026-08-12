@@ -11,7 +11,13 @@ final router = GoRouter(
     GoRoute(path: '/', builder: (context, state) => const ConnectScreen()),
     GoRoute(
       path: '/capture',
-      builder: (context, state) => const CaptureScreen(),
+      builder: (context, state) => CaptureScreen(
+        // Shared images arrive as cache file paths via the share intake.
+        initialPhotoPaths: switch (state.extra) {
+          final List<String> paths => paths,
+          _ => const [],
+        },
+      ),
     ),
     GoRoute(path: '/outbox', builder: (context, state) => const OutboxScreen()),
     GoRoute(

@@ -96,7 +96,7 @@
   "capturePhotoCamera": "Camera",
   "capturePhotoGallery": "Gallery",
   "captureNoLocation": "No location",
-  "captureNoLocationHint": "Attach a geotagged photo or choose a spot on the map.",
+  "captureNoLocationHint": "Attach a geotagged photo, use your current location, or choose a spot on the map.",
   "captureLocationFromPhoto": "Suggested from the photo",
   "captureLocationFromDevice": "Suggested from your current location",
   "captureEditLocation": "Choose on the map",
