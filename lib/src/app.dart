@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import 'router.dart';
+import 'theme.dart';
 
 class GeoreportApp extends StatelessWidget {
   const GeoreportApp({super.key, this.locale});
@@ -16,7 +17,8 @@ class GeoreportApp extends StatelessWidget {
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(colorSchemeSeed: Colors.teal),
+      theme: georeportLightTheme,
+      darkTheme: georeportDarkTheme,
       routerConfig: router,
     );
   }
