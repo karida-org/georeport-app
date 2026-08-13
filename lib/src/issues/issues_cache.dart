@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-import '../../api/models/bundle.dart';
-import '../../api/models/geojson.dart';
-import '../../api/models/issue_summary.dart';
+import '../api/models/bundle.dart';
+import '../api/models/geojson.dart';
+import '../api/models/issue_summary.dart';
 import 'issues_state.dart';
 
 /// What a cache load brings back: the state to show immediately, plus when

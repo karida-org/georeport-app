@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../connections/connection_manager.dart';
-import '../../features/issues/issues_store.dart';
 import '../issue_draft.dart';
 import 'draft_store.dart';
+import 'draft_submitted_signal.dart';
 import 'draft_submitter.dart';
 import 'queued_draft.dart';
 
@@ -154,7 +154,7 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
           final result = await _processOne(
             snapshot,
             ownsLock: true,
-            invalidateIssues: false,
+            announceSubmission: false,
           );
           createdAny = createdAny || result is SubmitCreated;
           // The submitter classifies everything it can; anything that still
@@ -167,7 +167,7 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
     } finally {
       _processing = false;
       if (createdAny) {
-        ref.invalidate(issuesProvider);
+        ref.read(draftSubmittedProvider.notifier).announce();
       }
       _scheduleNextRun();
     }
@@ -205,7 +205,9 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
   Future<SubmitResult?> _processOne(
     QueuedDraft entry, {
     bool ownsLock = false,
-    bool invalidateIssues = true,
+    // A batch announces once at the end instead of per entry, so a run that
+    // lands ten drafts does not make the issue list reload ten times.
+    bool announceSubmission = true,
   }) async {
     final store = _store;
     final client = ref.read(connectionManagerProvider).value?.active?.client;
@@ -223,8 +225,8 @@ class UploadQueue extends AsyncNotifier<List<QueuedDraft>> {
       final result = await submitter.process(entry);
       if (result is SubmitCreated) {
         await store.remove(entry.id);
-        if (invalidateIssues) {
-          ref.invalidate(issuesProvider);
+        if (announceSubmission) {
+          ref.read(draftSubmittedProvider.notifier).announce();
         }
       }
       await _refresh();

@@ -8,12 +8,13 @@ import 'package:path_provider/path_provider.dart';
 import '../../api/gtt_sync_client.dart';
 import '../../api/models/bundle.dart';
 import '../../api/models/changes_page.dart';
+import '../../capture/queue/draft_submitted_signal.dart';
+import '../../connections/active_client.dart';
 import '../../connections/connection_manager.dart';
+import '../../issues/issues_cache.dart';
+import '../../issues/issues_state.dart';
+import '../../issues/sync_status.dart';
 import '../../net/connectivity.dart';
-import 'issue_providers.dart';
-import 'issues_cache.dart';
-import 'issues_state.dart';
-import 'sync_status.dart';
 
 /// The on-disk cache for the active connection's issues; null while nothing
 /// is connected. One file per connection, so switching instances never
@@ -67,6 +68,10 @@ class IssuesNotifier extends AsyncNotifier<IssuesState> {
         _autoRefresh();
       }
     });
+    // A draft landing on the server means this list is out of date. Watching
+    // the queue's signal is the subscriber half of that: the queue announces,
+    // and the store decides for itself to reload.
+    ref.watch(draftSubmittedProvider);
     final client = ref.watch(activeClientProvider);
     final cache = _cache = await ref.watch(issuesCacheProvider.future);
 

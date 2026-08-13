@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../connections/active_client.dart';
 import '../../connections/connection_manager.dart';
-import '../issues/issue_providers.dart';
 
 /// What the connected server offers for time tracking, so every entry point
 /// degrades cleanly against servers without the contract.

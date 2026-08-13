@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../connections/connection_manager.dart';
+import '../../location/location_sharing_preference.dart';
 import '../location/location_sharing.dart';
 import 'location_permission.dart';
 import 'settings_widgets.dart';
