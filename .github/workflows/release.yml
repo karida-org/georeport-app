@@ -15,7 +15,7 @@ on:
       build-name:
         description: 'Version to stamp the build with (no leading v)'
         required: false
-        default: '0.0.0-dev'
+        default: '0.0.0'
 
 permissions:
   contents: read
@@ -25,9 +25,45 @@ env:
   FLUTTER_VERSION: 3.44.7
 
 jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      build-name: ${{ steps.resolve.outputs.build-name }}
+      label: ${{ steps.resolve.outputs.label }}
+    steps:
+      # The input arrives through the environment rather than being
+      # interpolated into the script, which would let its contents run.
+      - id: resolve
+        env:
+          INPUT_BUILD_NAME: ${{ inputs.build-name }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
+            LABEL="v$INPUT_BUILD_NAME"
+            BUILD_NAME="$INPUT_BUILD_NAME"
+          else
+            LABEL="$GITHUB_REF_NAME"
+            BUILD_NAME="${GITHUB_REF_NAME#v}"
+          fi
+          # A pre-release suffix names the release but cannot go in the
+          # version: flutter writes --build-name straight into
+          # CFBundleShortVersionString, which takes one to three integers
+          # separated by dots and nothing else. v0.2.0-rc1 therefore builds
+          # as 0.2.0 while the artifacts keep the full tag in their names.
+          BUILD_NAME="${BUILD_NAME%%-*}"
+          if ! printf '%s' "$BUILD_NAME" |
+              grep -Eq '^[0-9]+(\.[0-9]+){0,2}$'; then
+            echo "::error::'$BUILD_NAME' is not a usable version. Expected" \
+              "one to three dot-separated numbers, for example 0.1.0."
+            exit 1
+          fi
+          echo "build-name=$BUILD_NAME" >> "$GITHUB_OUTPUT"
+          echo "label=$LABEL" >> "$GITHUB_OUTPUT"
+
   android:
     name: Build Android (APK + AAB)
     runs-on: ubuntu-latest
+    needs: version
     env:
       # Secrets are not readable in step `if` expressions; presence is
       # computed here instead.
@@ -68,15 +104,9 @@ jobs:
       # interpolated into the script, which would let its contents run.
       - name: Build
         env:
-          INPUT_BUILD_NAME: ${{ inputs.build-name }}
+          BUILD_NAME: ${{ needs.version.outputs.build-name }}
+          LABEL: ${{ needs.version.outputs.label }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
-            BUILD_NAME="$INPUT_BUILD_NAME"
-            LABEL="v$BUILD_NAME"
-          else
-            BUILD_NAME="${GITHUB_REF_NAME#v}"
-            LABEL="$GITHUB_REF_NAME"
-          fi
           flutter build apk --release \
             --build-name "$BUILD_NAME" --build-number "$GITHUB_RUN_NUMBER"
           flutter build appbundle --release \
@@ -122,6 +152,7 @@ jobs:
   ios:
     name: Build iOS (unsigned archive)
     runs-on: macos-latest
+    needs: version
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -135,15 +166,9 @@ jobs:
       # released revision and the input for a future TestFlight pipeline.
       - name: Build
         env:
-          INPUT_BUILD_NAME: ${{ inputs.build-name }}
+          BUILD_NAME: ${{ needs.version.outputs.build-name }}
+          LABEL: ${{ needs.version.outputs.label }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
-            BUILD_NAME="$INPUT_BUILD_NAME"
-            LABEL="v$BUILD_NAME"
-          else
-            BUILD_NAME="${GITHUB_REF_NAME#v}"
-            LABEL="$GITHUB_REF_NAME"
-          fi
           flutter build ipa --release --no-codesign \
             --build-name "$BUILD_NAME" --build-number "$GITHUB_RUN_NUMBER"
           mkdir -p dist
@@ -160,7 +185,7 @@ jobs:
   release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
-    needs: [android, ios]
+    needs: [version, android, ios]
     # Only a tag publishes. A manual run exists to produce and check a build,
     # and must never create a release.
     if: github.event_name == 'push'
