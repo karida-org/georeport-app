@@ -61,9 +61,16 @@ class OAuthFlow {
   static Future<bool> _openInSystemBrowser(Uri uri) =>
       launchUrl(uri, mode: LaunchMode.externalApplication);
 
+  /// How long the browser sign-in may take before the flow gives up.
+  ///
+  /// This one waits on a person, not on a server, so it is far longer than
+  /// any network bound. Anything wrapping [authorize] in an outer timeout has
+  /// to sit above this, or it will cut off sign-ins that are going fine.
+  static const browserTimeout = Duration(minutes: 5);
+
   Future<OAuthTokens> authorize(
     OAuthConfig config, {
-    Duration timeout = const Duration(minutes: 5),
+    Duration timeout = browserTimeout,
   }) async {
     final pkce = PkcePair.generate();
     final state = _randomState();

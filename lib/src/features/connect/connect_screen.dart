@@ -9,6 +9,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../api/base_url.dart';
 import '../../api/models/capabilities.dart';
 import '../../auth/oauth_config.dart';
+import '../../auth/oauth_flow.dart';
 import '../../connections/connection_manager.dart';
 import 'saved_connections_list.dart';
 
@@ -17,6 +18,28 @@ import 'saved_connections_list.dart';
 /// application) or with a pasted API key. Saved instances are offered first.
 class ConnectScreen extends ConsumerStatefulWidget {
   const ConnectScreen({super.key});
+
+  // Bounds on a whole step, not on one request. Dio already times out each
+  // call; these exist because a step can also stall outside the network, in
+  // platform secure storage, which blocks indefinitely on a device with a
+  // broken keystore.
+  //
+  // Each is set above what the step can legitimately take, because failing a
+  // working connection is worse than waiting. What they rule out is waiting
+  // for ever.
+
+  /// One request.
+  static const probeTimeout = Duration(seconds: 60);
+
+  /// Up to five requests (capabilities, credential check, settings, user,
+  /// bundle) at up to 30s of receive time each, plus the secret write.
+  static const apiKeyConnectTimeout = Duration(minutes: 3);
+
+  /// The browser sign-in waits on a person, and [OAuthFlow.browserTimeout]
+  /// already bounds that with a message about sign-in specifically. This is
+  /// only a backstop for a stall elsewhere in the step, so it must stay above
+  /// that inner bound and should never be the one to fire.
+  static const oauthConnectTimeout = Duration(minutes: 10);
 
   @override
   ConsumerState<ConnectScreen> createState() => _ConnectScreenState();
@@ -37,15 +60,6 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     super.dispose();
   }
 
-  /// A bound on the whole connect sequence, not on one request.
-  ///
-  /// Dio already times out each call, but the sequence also writes to
-  /// platform secure storage, which can block indefinitely on a device with a
-  /// broken keystore. Generous on purpose: five requests at up to 30s of
-  /// receive time each are legitimate on a slow link, and failing a working
-  /// connection is worse than waiting. What it rules out is waiting forever.
-  static const connectTimeout = Duration(seconds: 90);
-
   /// Runs a connect step with the busy flag, a bound, and a readable failure.
   ///
   /// [failureMessage] turns whatever went wrong into what the user reads.
@@ -53,6 +67,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     Future<void> Function() action, {
     required String Function(Object error) failureMessage,
     required String timeoutMessage,
+    required Duration timeout,
   }) async {
     setState(() {
       _busy = true;
@@ -60,7 +75,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     });
     try {
       await action().timeout(
-        connectTimeout,
+        timeout,
         onTimeout: () => throw TimeoutException(timeoutMessage),
       );
     } on TimeoutException catch (timeout) {
@@ -105,6 +120,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       },
       failureMessage: (error) => l10n.connectFailed('$error'),
       timeoutMessage: l10n.connectTimedOut,
+      timeout: ConnectScreen.probeTimeout,
     );
   }
 
@@ -123,6 +139,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       },
       failureMessage: (error) => l10n.connectFailed('$error'),
       timeoutMessage: l10n.connectTimedOut,
+      timeout: ConnectScreen.oauthConnectTimeout,
     );
   }
 
@@ -141,6 +158,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       },
       failureMessage: (error) => l10n.connectFailed('$error'),
       timeoutMessage: l10n.connectTimedOut,
+      timeout: ConnectScreen.apiKeyConnectTimeout,
     );
   }
 

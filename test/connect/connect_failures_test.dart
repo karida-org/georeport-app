@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:georeport/l10n/generated/app_localizations.dart';
+import 'package:georeport/src/auth/oauth_flow.dart';
 import 'package:georeport/src/connections/connection_manager.dart';
 import 'package:georeport/src/features/connect/connect_screen.dart';
 
@@ -87,5 +88,34 @@ void main() {
     final en = await AppLocalizations.delegate.load(const Locale('en'));
 
     expect(en.connectTimedOut, contains('try again'));
+  });
+
+  group('the step bounds', () {
+    test('never cut off a browser sign-in that is going fine', () {
+      // The regression this guards: a single 90s bound covering every step
+      // also covered the OAuth path, where the user is still typing their
+      // password in the browser. The outer backstop has to sit above the
+      // inner bound, or sign-in dies mid-flow with the wrong message.
+      expect(
+        ConnectScreen.oauthConnectTimeout,
+        greaterThan(OAuthFlow.browserTimeout),
+      );
+    });
+
+    test('allow the whole api-key sequence its per-request budget', () {
+      // Five requests at up to 30s of receive time each. A bound below that
+      // sum fails slow-but-working instances, which is worse than waiting.
+      expect(
+        ConnectScreen.apiKeyConnectTimeout,
+        greaterThanOrEqualTo(const Duration(seconds: 150)),
+      );
+    });
+
+    test('bound the single-request probe more tightly than a full connect', () {
+      expect(
+        ConnectScreen.probeTimeout,
+        lessThan(ConnectScreen.apiKeyConnectTimeout),
+      );
+    });
   });
 }
