@@ -25,7 +25,10 @@ void main() {
       if (file is! File || !file.path.endsWith('.dart')) {
         continue;
       }
-      final path = file.path;
+      // Normalized because Directory.listSync returns platform separators,
+      // and on Windows this test would otherwise skip nothing and flag every
+      // feature file, while never recognising the composition root.
+      final path = file.path.replaceAll(r'\', '/');
       if (path.startsWith('lib/src/features/') ||
           _compositionRoot.contains(path)) {
         continue;
