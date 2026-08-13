@@ -20,6 +20,8 @@
       }
     }
   },
+  "connectInvalidUrl": "That does not look like a web address. Example: https://redmine.example.org",
+  "connectTimedOut": "The instance did not answer in time. Check the address and your connection, then try again.",
   "connectContinueButton": "Continue",
   "connectServerSummary": "Redmine {version} with GTT Sync",
   "@connectServerSummary": {
