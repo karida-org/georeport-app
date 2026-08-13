@@ -7,6 +7,8 @@
   "connectFieldRequired": "必須です",
   "connectButton": "接続",
   "connectFailed": "接続できませんでした: {message}",
+  "connectInvalidUrl": "ウェブアドレスの形式ではないようです。例: https://redmine.example.org",
+  "connectTimedOut": "インスタンスから時間内に応答がありませんでした。アドレスと通信状況を確認して、もう一度お試しください。",
   "connectContinueButton": "次へ",
   "connectServerSummary": "Redmine {version}（GTT Sync 対応）",
   "connectSignInButton": "アカウントでサインイン",

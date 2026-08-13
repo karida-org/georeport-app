@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -35,20 +37,43 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     super.dispose();
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  /// A bound on the whole connect sequence, not on one request.
+  ///
+  /// Dio already times out each call, but the sequence also writes to
+  /// platform secure storage, which can block indefinitely on a device with a
+  /// broken keystore. Generous on purpose: five requests at up to 30s of
+  /// receive time each are legitimate on a slow link, and failing a working
+  /// connection is worse than waiting. What it rules out is waiting forever.
+  static const connectTimeout = Duration(seconds: 90);
+
+  /// Runs a connect step with the busy flag, a bound, and a readable failure.
+  ///
+  /// [failureMessage] turns whatever went wrong into what the user reads.
+  Future<void> _run(
+    Future<void> Function() action, {
+    required String Function(Object error) failureMessage,
+    required String timeoutMessage,
+  }) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      await action();
+      await action().timeout(
+        connectTimeout,
+        onTimeout: () => throw TimeoutException(timeoutMessage),
+      );
+    } on TimeoutException catch (timeout) {
+      if (mounted) {
+        setState(() => _error = timeout.message ?? timeoutMessage);
+      }
       // Catch everything: a malformed probe response surfaces as a TypeError
       // (an Error, not an Exception), and a silent no-op would strand the
       // user on an idle-looking screen.
       // ignore: avoid_catches_without_on_clauses
     } catch (error) {
       if (mounted) {
-        setState(() => _error = '$error');
+        setState(() => _error = failureMessage(error));
       }
     } finally {
       if (mounted) {
@@ -57,30 +82,67 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     }
   }
 
-  Future<void> _probe() => _run(() async {
-    final capabilities = await ref
-        .read(connectionManagerProvider.notifier)
-        .probe(normalizeBaseUrl(_urlController.text));
-    setState(() => _probed = capabilities);
-  });
+  /// Rejects an address that cannot be a URL before any request is made, so a
+  /// typo reads as an instruction rather than as a parser diagnostic.
+  bool _rejectUnusableUrl(AppLocalizations l10n) {
+    if (isUsableBaseUrl(_urlController.text)) {
+      return false;
+    }
+    setState(() => _error = l10n.connectInvalidUrl);
+    return true;
+  }
 
-  Future<void> _signInWithOAuth() => _run(() async {
-    await ref
-        .read(connectionManagerProvider.notifier)
-        .connectWithOAuth(
-          baseUrl: normalizeBaseUrl(_urlController.text),
-          capabilities: _probed!,
-        );
-  });
+  Future<void> _probe(AppLocalizations l10n) async {
+    if (_rejectUnusableUrl(l10n)) {
+      return;
+    }
+    await _run(
+      () async {
+        final capabilities = await ref
+            .read(connectionManagerProvider.notifier)
+            .probe(normalizeBaseUrl(_urlController.text));
+        setState(() => _probed = capabilities);
+      },
+      failureMessage: (error) => l10n.connectFailed('$error'),
+      timeoutMessage: l10n.connectTimedOut,
+    );
+  }
 
-  Future<void> _connectWithApiKey() => _run(() async {
-    await ref
-        .read(connectionManagerProvider.notifier)
-        .connectWithApiKey(
-          baseUrl: normalizeBaseUrl(_urlController.text),
-          apiKey: _apiKeyController.text.trim(),
-        );
-  });
+  Future<void> _signInWithOAuth(AppLocalizations l10n) async {
+    if (_rejectUnusableUrl(l10n)) {
+      return;
+    }
+    await _run(
+      () async {
+        await ref
+            .read(connectionManagerProvider.notifier)
+            .connectWithOAuth(
+              baseUrl: normalizeBaseUrl(_urlController.text),
+              capabilities: _probed!,
+            );
+      },
+      failureMessage: (error) => l10n.connectFailed('$error'),
+      timeoutMessage: l10n.connectTimedOut,
+    );
+  }
+
+  Future<void> _connectWithApiKey(AppLocalizations l10n) async {
+    if (_rejectUnusableUrl(l10n)) {
+      return;
+    }
+    await _run(
+      () async {
+        await ref
+            .read(connectionManagerProvider.notifier)
+            .connectWithApiKey(
+              baseUrl: normalizeBaseUrl(_urlController.text),
+              apiKey: _apiKeyController.text.trim(),
+            );
+      },
+      failureMessage: (error) => l10n.connectFailed('$error'),
+      timeoutMessage: l10n.connectTimedOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +208,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   Text(
-                    l10n.connectFailed(_error!),
+                    _error!,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -183,7 +245,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
           onChanged: (_) => setState(() => _probed = null),
           onSubmitted: (_) {
             if (!_busy && _urlController.text.trim().isNotEmpty) {
-              _probe();
+              _probe(l10n);
             }
           },
         ),
@@ -192,7 +254,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
           FilledButton(
             onPressed: _busy || _urlController.text.trim().isEmpty
                 ? null
-                : _probe,
+                : () => _probe(l10n),
             child: _busy
                 ? const SizedBox(
                     width: 20,
@@ -214,7 +276,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
           const SizedBox(height: 8),
           if (oauthAvailable) ...[
             FilledButton.icon(
-              onPressed: _busy ? null : _signInWithOAuth,
+              onPressed: _busy ? null : () => _signInWithOAuth(l10n),
               icon: const Icon(Icons.open_in_browser),
               label: Text(l10n.connectSignInButton),
             ),
@@ -239,7 +301,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
             ),
             const SizedBox(height: 8),
             (oauthAvailable ? OutlinedButton.new : FilledButton.new)(
-              onPressed: _busy ? null : _connectWithApiKey,
+              onPressed: _busy ? null : () => _connectWithApiKey(l10n),
               child: Text(l10n.connectButton),
             ),
           ],

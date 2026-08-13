@@ -67,4 +67,51 @@ void main() {
       }
     });
   });
+
+  group('isUsableBaseUrl', () {
+    test('rejects the exact input from the bug report', () {
+      // Reported on Android: this reached Uri.parse and put
+      // "FormatException: Illegal scheme character (at character 5)" on
+      // screen, complete with a caret diagram.
+      expect(
+        isUsableBaseUrl('http 10.0.2.2 3000http://10.0.2.2:3000'),
+        isFalse,
+      );
+    });
+
+    test('accepts what people actually type', () {
+      for (final input in [
+        'redmine.example.org',
+        'https://redmine.example.org',
+        'https://redmine.example.org/',
+        '  https://redmine.example.org  ',
+        'example.org/redmine',
+        // Local and LAN instances: no dots in the host, and plain http.
+        'http://10.0.2.2:3000',
+        'http://redmine-box:3000',
+      ]) {
+        expect(isUsableBaseUrl(input), isTrue, reason: 'for "$input"');
+      }
+    });
+
+    test('rejects what cannot be an address', () {
+      for (final input in [
+        '',
+        '   ',
+        'https://',
+        'ftp://redmine.example.org',
+        'just some words',
+      ]) {
+        expect(isUsableBaseUrl(input), isFalse, reason: 'for "$input"');
+      }
+    });
+
+    test('does not reject an unlikely but legal address', () {
+      // The check exists to catch typos, not to police hostnames. Refusing
+      // these would lock out exactly the local setups the app is developed
+      // against.
+      expect(isUsableBaseUrl('http://localhost:3000'), isTrue);
+      expect(isUsableBaseUrl('http://192.168.1.50'), isTrue);
+    });
+  });
 }
