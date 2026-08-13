@@ -7,13 +7,14 @@ SchemaCustomField _field({
   required String name,
   String fieldFormat = 'string',
   bool required = false,
+  bool multiple = false,
 }) {
   return SchemaCustomField(
     id: id,
     name: name,
     fieldFormat: fieldFormat,
     required: required,
-    multiple: false,
+    multiple: multiple,
     possibleValues: const [],
     trackerIds: const [],
   );
@@ -73,7 +74,9 @@ void main() {
     test('keeps non-string values as they are', () {
       // Multi-select values arrive as lists and must not be stringified.
       final values = normalizeCustomFieldValues(
-        fields: [_field(id: 7, name: 'Tags')],
+        fields: [
+          _field(id: 7, name: 'Tags', fieldFormat: 'list', multiple: true),
+        ],
         entered: {
           7: ['a', 'b'],
         },
