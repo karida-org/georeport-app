@@ -120,12 +120,16 @@ void main() {
     expect(changes.last, (1, null));
   });
 
-  testWidgets('locks the inputs while a submission is in flight', (
+  testWidgets('locks the text inputs while a submission is in flight', (
     tester,
   ) async {
+    // Only the subject and description today. The custom field editors and
+    // the optional-fields toggle stay live, which is issue #91; this test
+    // claims exactly what holds rather than what should.
     await pump(tester, fields: const [], enabled: false);
 
     final fields = tester.widgetList<TextField>(find.byType(TextField));
+    expect(fields, hasLength(2));
     expect(fields.every((field) => field.enabled == false), isTrue);
   });
 }
