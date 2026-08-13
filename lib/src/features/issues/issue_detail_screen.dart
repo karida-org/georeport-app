@@ -10,6 +10,7 @@ import '../../map/issue_style.dart';
 import '../../shell/session_guard.dart';
 import '../../time/timers_notifier.dart';
 import '../../widgets/rich_text_body.dart';
+import '../time/quick_log_gate.dart';
 import '../time/quick_log_sheet.dart';
 import '../time/time_providers.dart';
 import '../time/timers_card.dart';
@@ -44,6 +45,57 @@ class _IssueDetailScreenState extends ConsumerState<IssueDetailScreen> {
   int get issueId => widget.issueId;
 
   @override
+  void initState() {
+    super.initState();
+    // The timer notification's "Log time" action lands here with the sheet
+    // requested. Listening rather than checking during build keeps the effect
+    // out of the build method, where the framework makes no promise about how
+    // often it runs. fireImmediately covers the case the listener alone would
+    // miss: arriving at a screen whose document is already cached, so no
+    // further change is coming.
+    if (widget.openQuickLog) {
+      ref.listenManual(
+        issueDocumentProvider(issueId),
+        _openQuickLogWhenReady,
+        fireImmediately: true,
+      );
+    }
+  }
+
+  /// Opens the quick-log sheet once, as soon as the document confirms this
+  /// user may log time on this issue.
+  void _openQuickLogWhenReady(
+    AsyncValue<IssueDocument>? previous,
+    AsyncValue<IssueDocument> next,
+  ) {
+    final document = next.value;
+    // Still loading, or failed: nothing to decide on yet.
+    if (document == null) {
+      return;
+    }
+    if (!canOpenQuickLog(
+      alreadyOpened: _quickLogOpened,
+      serverAllowsCreate: ref.read(timeCapabilitiesProvider).canCreate,
+      document: document,
+    )) {
+      return;
+    }
+    _quickLogOpened = true;
+    // Deferred because this can run while a frame is being built, and pushing
+    // a route then is not allowed.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      showQuickLogSheet(
+        context,
+        issueId: issueId,
+        projectId: document.project.id,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final ref = this.ref;
     // Lives on the root navigator, outside the shell and its session guard,
@@ -56,21 +108,9 @@ class _IssueDetailScreenState extends ConsumerState<IssueDetailScreen> {
     final canLogTime =
         ref.watch(timeCapabilitiesProvider).canCreate &&
         (document.value?.editable.canLogTime ?? false);
-    // The notification's "Log time" action: open the sheet once, as soon
-    // as the loaded document confirms logging is allowed here.
-    if (widget.openQuickLog &&
-        !_quickLogOpened &&
-        canLogTime &&
-        document.value != null) {
-      _quickLogOpened = true;
-      final projectId = document.value!.project.id;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          showQuickLogSheet(context, issueId: issueId, projectId: projectId);
-        }
-      });
-    }
-    // Rebuild on timer changes so the play/pause toggle tracks state.
+    // Rebuild on timer changes so the play/pause toggle tracks state, then
+    // ask the notifier for this issue's timer. Watching the notifier itself
+    // would not rebuild, which is why these are two calls and not one.
     ref.watch(timersProvider);
     final timer = ref.read(timersProvider.notifier).timerFor(issueId);
     return Scaffold(
