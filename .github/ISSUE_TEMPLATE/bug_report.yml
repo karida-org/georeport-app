@@ -1,0 +1,57 @@
+name: Bug report
+description: Something behaves differently from what you expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Field problems are hard to reproduce from a desk, so the details below
+        matter more than usual. If you cannot answer everything, file it anyway.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Connect to an instance
+        2. Open Issues
+        3. ...
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Settings > About, or the tag you built from.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+        - Other
+  - type: input
+    id: server
+    attributes:
+      label: Server
+      description: >-
+        Redmine version and redmine_gtt_sync version, if you can see them. The
+        app degrades by feature-detection, so the server version often explains
+        a missing button.
+  - type: textarea
+    id: connectivity
+    attributes:
+      label: Connectivity
+      description: >-
+        Online, offline, or intermittent when it happened. Several paths behave
+        differently depending on this.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Logs, screenshots, or a note that it happens only sometimes.

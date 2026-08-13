@@ -1,11 +1,11 @@
 {
-    "name": "georeport",
-    "short_name": "georeport",
+    "name": "Georeport",
+    "short_name": "Georeport",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F4F7F4",
+    "theme_color": "#2F6E2B",
+    "description": "Mobile client for GTT-Redmine.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

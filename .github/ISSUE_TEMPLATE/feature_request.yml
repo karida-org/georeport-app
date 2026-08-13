@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest something the app should do.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >-
+        What are you trying to do in the field, and what makes it hard today?
+        Describing the situation rather than the solution usually leads to a
+        better answer.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you have in mind
+      description: Optional. A sketch of how it might work.
+  - type: textarea
+    id: server-side
+    attributes:
+      label: Does this need server support?
+      description: >-
+        The app talks only to the redmine_gtt_sync contract. If what you want
+        needs data the server does not expose yet, say so; it may belong in the
+        plugin first.
