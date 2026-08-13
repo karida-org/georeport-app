@@ -4,9 +4,11 @@ import 'package:maplibre/maplibre.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/bundle.dart';
+import '../../api/models/current_user.dart';
 import '../../connections/connection_manager.dart';
 import '../home/today_providers.dart';
 import '../outbox/outbox_banner.dart';
+import 'assignee_match.dart';
 import 'issues_list_view.dart';
 import 'issues_maplibre_view.dart';
 import 'issues_state.dart';
@@ -82,11 +84,7 @@ class _IssuesViewState extends ConsumerState<IssuesView> {
         ),
       ),
       data: (data) {
-        final visible = _filtered(
-          data.sorted,
-          filter,
-          currentUser?.displayName,
-        );
+        final visible = _filtered(data.sorted, filter, currentUser);
         final mapControls = mode == IssuesViewMode.map;
         return Column(
           children: [
@@ -167,9 +165,9 @@ class _IssuesViewState extends ConsumerState<IssuesView> {
   List<BundleIssue> _filtered(
     List<BundleIssue> issues,
     MyWorkFilter filter,
-    String? displayName,
+    CurrentUser? user,
   ) {
-    if (filter == MyWorkFilter.all || displayName == null) {
+    if (filter == MyWorkFilter.all || user == null) {
       return issues;
     }
     if (filter == MyWorkFilter.today) {
@@ -177,13 +175,19 @@ class _IssuesViewState extends ConsumerState<IssuesView> {
       // dashboard's Today card.
       return todayIssues(
         issues,
-        assigneeDisplayName: displayName,
+        assigneeId: user.id,
+        assigneeDisplayName: user.displayName,
         today: DateTime.now(),
       );
     }
     return [
       for (final issue in issues)
-        if (issue.summary.assignedTo == displayName) issue,
+        if (isAssignedTo(
+          issue.summary,
+          userId: user.id,
+          userDisplayName: user.displayName,
+        ))
+          issue,
     ];
   }
 }

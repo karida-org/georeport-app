@@ -15,6 +15,7 @@ class IssueSummary {
     required this.editable,
     this.priority,
     this.assignedTo,
+    this.assignedToId,
     this.category,
     this.fixedVersion,
     this.startDate,
@@ -38,6 +39,7 @@ class IssueSummary {
       editable: json['editable'] == true,
       priority: json['priority'] as String?,
       assignedTo: json['assigned_to'] as String?,
+      assignedToId: (json['assigned_to_id'] as num?)?.toInt(),
       category: json['category'] as String?,
       fixedVersion: json['fixed_version'] as String?,
       startDate: _date(json['start_date']),
@@ -58,6 +60,12 @@ class IssueSummary {
   final bool editable;
   final String? priority;
   final String? assignedTo;
+
+  /// The assignee's user id. Prefer this over [assignedTo] whenever the
+  /// question is "who is this", because [assignedTo] is rendered through the
+  /// instance's `user_format` setting and is only a label. Null on servers
+  /// older than the field, where a name comparison is the only option left.
+  final int? assignedToId;
   final String? category;
   final String? fixedVersion;
   final DateTime? startDate;

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models/bundle.dart';
 import '../../connections/connection_manager.dart';
+import '../issues/assignee_match.dart';
 import '../issues/issues_store.dart';
 
 /// The worker's plate for today: assigned issues due today or overdue,
@@ -10,16 +11,21 @@ import '../issues/issues_store.dart';
 /// task list) can replace the sort without touching consumers.
 List<BundleIssue> todayIssues(
   List<BundleIssue> issues, {
+  required int? assigneeId,
   required String? assigneeDisplayName,
   required DateTime today,
 }) {
-  if (assigneeDisplayName == null) {
+  if (assigneeId == null && assigneeDisplayName == null) {
     return const [];
   }
   final endOfToday = DateTime(today.year, today.month, today.day, 23, 59, 59);
   final mine = [
     for (final issue in issues)
-      if (issue.summary.assignedTo == assigneeDisplayName &&
+      if (isAssignedTo(
+            issue.summary,
+            userId: assigneeId,
+            userDisplayName: assigneeDisplayName,
+          ) &&
           issue.summary.dueDate != null &&
           !issue.summary.dueDate!.isAfter(endOfToday))
         issue,
@@ -37,6 +43,7 @@ final todayIssuesProvider = Provider.autoDispose<List<BundleIssue>>((ref) {
   final user = ref.watch(connectionManagerProvider).value?.active?.currentUser;
   return todayIssues(
     issues,
+    assigneeId: user?.id,
     assigneeDisplayName: user?.displayName,
     today: DateTime.now(),
   );
