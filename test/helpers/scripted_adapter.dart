@@ -28,6 +28,16 @@ class ScriptedAdapter implements HttpClientAdapter {
     final reply = requests.length <= replies.length
         ? replies[requests.length - 1]
         : replies.last;
+    final rawBytes = reply.rawBytes;
+    if (rawBytes != null) {
+      return ResponseBody.fromBytes(
+        rawBytes,
+        reply.statusCode,
+        headers: {
+          Headers.contentTypeHeader: ['application/octet-stream'],
+        },
+      );
+    }
     return ResponseBody.fromString(
       jsonEncode(reply.body),
       reply.statusCode,
@@ -51,16 +61,32 @@ class SeenRequest {
   SeenRequest.from(RequestOptions options)
     : uri = options.uri,
       method = options.method,
+      body = options.data,
       headers = Map<String, dynamic>.from(options.headers);
 
   final Uri uri;
   final String method;
+
+  /// The request payload as the caller passed it, before serialization.
+  final Object? body;
   final Map<String, dynamic> headers;
 }
 
 class ScriptedReply {
-  const ScriptedReply(this.statusCode, [this.body = const {}]);
+  /// A JSON reply: [body] is encoded and served as `application/json`.
+  const ScriptedReply(this.statusCode, [this.body = const {}])
+    : rawBytes = null;
+
+  /// A reply served as raw bytes, for the binary path.
+  ///
+  /// Bytes rather than a string because a string would go through UTF-8, which
+  /// cannot carry an arbitrary byte (0xFF alone is not valid UTF-8). An image
+  /// is exactly that kind of payload, so a test asserting the bytes arrive
+  /// intact has to be able to send ones that text could not represent.
+  const ScriptedReply.bytes(this.statusCode, List<int> this.rawBytes)
+    : body = const <String, dynamic>{};
 
   final int statusCode;
   final Object body;
+  final List<int>? rawBytes;
 }
