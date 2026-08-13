@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -8,6 +7,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/issue_document.dart';
 import '../../connections/connection_manager.dart';
 import '../../map/issue_style.dart';
+import '../../shell/session_guard.dart';
 import '../../time/timers_notifier.dart';
 import '../../widgets/rich_text_body.dart';
 import '../time/quick_log_sheet.dart';
@@ -48,11 +48,7 @@ class _IssueDetailScreenState extends ConsumerState<IssueDetailScreen> {
     final ref = this.ref;
     // Lives on the root navigator, outside the shell and its session guard,
     // so it carries its own: a dead session yields to the connect screen.
-    ref.listen(connectionManagerProvider, (previous, next) {
-      if (next.value != null && next.value!.active == null) {
-        context.go('/');
-      }
-    });
+    watchSessionEnd(ref, context);
     final l10n = AppLocalizations.of(context);
     final document = ref.watch(issueDocumentProvider(issueId));
     // Time actions appear only when the server has the contract AND this

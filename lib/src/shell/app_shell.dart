@@ -11,6 +11,7 @@ import '../connections/connection_manager.dart';
 import '../features/issues/sync_status.dart';
 import '../net/connectivity.dart';
 import 'bottom_bar.dart';
+import 'session_guard.dart';
 
 enum _MenuAction { settings, switchInstance }
 
@@ -29,11 +30,7 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // One session guard for every branch behind the bar: when the session
     // ends, the whole shell yields to the connect screen.
-    ref.listen(connectionManagerProvider, (previous, next) {
-      if (next.value != null && next.value!.active == null) {
-        context.go('/');
-      }
-    });
+    watchSessionEnd(ref, context);
     final l10n = AppLocalizations.of(context);
     final active = ref.watch(connectionManagerProvider).value?.active;
     final sync = ref.watch(syncStatusProvider);

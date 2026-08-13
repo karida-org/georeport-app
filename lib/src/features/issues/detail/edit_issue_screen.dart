@@ -327,10 +327,7 @@ class _EditIssueScreenState extends ConsumerState<EditIssueScreen> {
     }
     final location = _location;
     if (_locationChanged && location != null) {
-      fields['geojson'] =
-          '{"type":"Feature","geometry":{"type":"Point",'
-          '"coordinates":[${location.longitude},${location.latitude}]},'
-          '"properties":{}}';
+      fields['geojson'] = pointFeatureJson(location);
     }
     return fields;
   }

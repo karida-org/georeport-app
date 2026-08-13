@@ -4,11 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:maplibre/maplibre.dart' hide Position;
 
 import '../../../l10n/generated/app_localizations.dart';
-
-const _styleUrl = String.fromEnvironment(
-  'GEOREPORT_MAP_STYLE',
-  defaultValue: 'https://tiles.openfreemap.org/styles/liberty',
-);
+import '../../map/map_style.dart';
 
 /// Full-screen location chooser: the pin stays centered, the map moves under
 /// it. Returns the chosen position, or null when dismissed. Confirmation
@@ -40,7 +36,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         children: [
           MapLibreMap(
             options: MapOptions(
-              initStyle: _styleUrl,
+              initStyle: mapStyleUrl,
               initCenter: Geographic(
                 lon: initial?.longitude ?? 137.0,
                 lat: initial?.latitude ?? 37.0,

@@ -7,14 +7,8 @@ import '../../api/models/gtt_style_settings.dart';
 import '../../map/bundle_bounds.dart';
 import '../../map/bundle_sources.dart';
 import '../../map/issue_layers.dart';
+import '../../map/map_style.dart';
 import '../../map/tracker_icons.dart';
-
-/// Overridable at build time, e.g. for a self-hosted style or a local dev
-/// proxy: `flutter run --dart-define=GEOREPORT_MAP_STYLE=<url>`.
-const mapStyleUrl = String.fromEnvironment(
-  'GEOREPORT_MAP_STYLE',
-  defaultValue: 'https://tiles.openfreemap.org/styles/liberty',
-);
 
 class IssuesMapLibreView extends StatefulWidget {
   const IssuesMapLibreView({

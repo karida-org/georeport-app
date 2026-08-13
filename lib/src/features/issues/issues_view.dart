@@ -6,6 +6,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/bundle.dart';
 import '../../api/models/current_user.dart';
 import '../../connections/connection_manager.dart';
+import '../../map/map_style.dart';
 import '../home/today_providers.dart';
 import '../outbox/outbox_banner.dart';
 import 'assignee_match.dart';

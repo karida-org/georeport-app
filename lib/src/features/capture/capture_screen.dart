@@ -14,8 +14,8 @@ import '../../capture/device_location.dart';
 import '../../capture/exif_location.dart';
 import '../../capture/issue_draft.dart';
 import '../../capture/queue/upload_queue.dart';
-import '../../connections/connection_manager.dart';
 import '../../media/mime.dart';
+import '../../shell/session_guard.dart';
 import '../issues/issues_store.dart';
 import 'capture_defaults.dart';
 import 'capture_providers.dart';
@@ -313,11 +313,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     final l10n = AppLocalizations.of(context);
     // Guard: this screen needs a session; state-driven like the rest of the
     // navigation.
-    ref.listen(connectionManagerProvider, (previous, next) {
-      if (next.value != null && next.value!.active == null && mounted) {
-        context.go('/');
-      }
-    });
+    watchSessionEnd(ref, context);
     final issues = ref.watch(issuesProvider).value;
     final projects = issues?.projects ?? const [];
     // Effective selections: defaults are derived, never written during

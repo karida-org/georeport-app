@@ -1,4 +1,25 @@
+import 'dart:convert';
+
 import 'package:latlong2/latlong.dart';
+
+/// A single point as the GeoJSON Feature the server stores as issue geometry.
+///
+/// Encoded rather than interpolated: this string is a payload, not display
+/// text, and building JSON by hand is how a stray value ends up producing
+/// something the server rejects.
+///
+/// GeoJSON is longitude first (RFC 7946), which is the opposite order from
+/// [LatLng] and from how the coordinates read on screen.
+String pointFeatureJson(LatLng location) {
+  return jsonEncode({
+    'type': 'Feature',
+    'geometry': {
+      'type': 'Point',
+      'coordinates': [location.longitude, location.latitude],
+    },
+    'properties': <String, dynamic>{},
+  });
+}
 
 /// A GeoJSON geometry reduced to what the map needs.
 ///

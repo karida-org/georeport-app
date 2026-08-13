@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:latlong2/latlong.dart';
 
+import '../api/models/geojson.dart';
+
 /// One photo attached to a draft, kept as raw bytes until submission.
 class DraftPhoto {
   const DraftPhoto({
@@ -51,11 +53,7 @@ class IssueDraft {
         'tracker_id': trackerId,
         'subject': subject,
         if (description.isNotEmpty) 'description': description,
-        if (location != null)
-          'geojson':
-              '{"type":"Feature","geometry":{"type":"Point",'
-              '"coordinates":[${location.longitude},${location.latitude}]},'
-              '"properties":{}}',
+        if (location != null) 'geojson': pointFeatureJson(location),
         if (customFieldValues.isNotEmpty)
           'custom_fields': [
             for (final entry in customFieldValues.entries)

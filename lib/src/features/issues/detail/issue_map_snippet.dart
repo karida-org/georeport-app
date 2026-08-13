@@ -7,11 +7,7 @@ import '../../../api/models/issue_document.dart';
 import '../../../api/models/issue_summary.dart';
 import '../../../map/bundle_sources.dart';
 import '../../../map/issue_layers.dart';
-
-const _styleUrl = String.fromEnvironment(
-  'GEOREPORT_MAP_STYLE',
-  defaultValue: 'https://tiles.openfreemap.org/styles/liberty',
-);
+import '../../../map/map_style.dart';
 
 /// A small, non-interactive map showing one issue's geometry.
 class IssueMapSnippet extends StatelessWidget {
@@ -32,7 +28,7 @@ class IssueMapSnippet extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: MapLibreMap(
           options: MapOptions(
-            initStyle: _styleUrl,
+            initStyle: mapStyleUrl,
             initCenter: Geographic(
               lon: geometry.anchor.longitude,
               lat: geometry.anchor.latitude,

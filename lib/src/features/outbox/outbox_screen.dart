@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../capture/queue/queued_draft.dart';
 import '../../capture/queue/upload_queue.dart';
-import '../../connections/connection_manager.dart';
+import '../../shell/session_guard.dart';
 
 /// Reports waiting to reach the server: their state, the last error, and
 /// manual retry/discard. The queue itself keeps working without this screen;
@@ -17,11 +16,7 @@ class OutboxScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Same state-driven session guard as the other authenticated screens.
-    ref.listen(connectionManagerProvider, (previous, next) {
-      if (next.value != null && next.value!.active == null) {
-        context.go('/');
-      }
-    });
+    watchSessionEnd(ref, context);
     final l10n = AppLocalizations.of(context);
     final entries = ref.watch(activeOutboxEntriesProvider);
     return Scaffold(
