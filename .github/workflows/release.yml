@@ -6,6 +6,16 @@ name: Release
 on:
   push:
     tags: ['v*.*.*']
+  # A signed build on demand, publishing nothing. Without this the signing
+  # path is only ever exercised by a real release, which is a poor place to
+  # discover that a secret is missing or that the keystore format is one the
+  # Android Gradle Plugin cannot read.
+  workflow_dispatch:
+    inputs:
+      build-name:
+        description: 'Version to stamp the build with (no leading v)'
+        required: false
+        default: '0.0.0-dev'
 
 permissions:
   contents: read
@@ -52,19 +62,56 @@ jobs:
           PROPS
 
       # The tag names the user-facing version; the run number keeps the
-      # Android versionCode monotonic without per-release pubspec bumps.
+      # Android versionCode monotonic without per-release pubspec bumps. A
+      # manual run has no tag, so it takes its version from the input.
+      # The input arrives through the environment rather than being
+      # interpolated into the script, which would let its contents run.
       - name: Build
+        env:
+          INPUT_BUILD_NAME: ${{ inputs.build-name }}
         run: |
-          BUILD_NAME="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
+            BUILD_NAME="$INPUT_BUILD_NAME"
+            LABEL="v$BUILD_NAME"
+          else
+            BUILD_NAME="${GITHUB_REF_NAME#v}"
+            LABEL="$GITHUB_REF_NAME"
+          fi
           flutter build apk --release \
             --build-name "$BUILD_NAME" --build-number "$GITHUB_RUN_NUMBER"
           flutter build appbundle --release \
             --build-name "$BUILD_NAME" --build-number "$GITHUB_RUN_NUMBER"
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-release.apk \
-            "dist/georeport-$GITHUB_REF_NAME-android.apk"
+            "dist/georeport-$LABEL-android.apk"
           cp build/app/outputs/bundle/release/app-release.aab \
-            "dist/georeport-$GITHUB_REF_NAME-android.aab"
+            "dist/georeport-$LABEL-android.aab"
+
+      # A build with no keystore silently falls back to the debug key and
+      # still succeeds, which is how v0.1.0 shipped debug-signed without
+      # anything in the log saying so. Read the signer back out of the APK
+      # rather than trusting that the secrets were wired up correctly.
+      - name: Check what signed the APK
+        run: |
+          set -o pipefail
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner |
+            sort -V | tail -1)"
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::apksigner not found under $ANDROID_HOME/build-tools"
+            exit 1
+          fi
+          "$APKSIGNER" verify --print-certs -v dist/*.apk | tee certs.txt
+          if grep -q 'CN=Android Debug' certs.txt; then
+            if [ "$HAS_KEYSTORE" = 'true' ]; then
+              echo "::error::Signed with the debug key even though the" \
+                "keystore secrets are set. The release signing config did" \
+                "not take effect; these artifacts are not store-installable."
+              exit 1
+            fi
+            echo "::warning::No keystore secrets configured, so this build" \
+              "is debug-signed. Installable for testing, not accepted by" \
+              "app stores."
+          fi
 
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
@@ -87,13 +134,21 @@ jobs:
       # installed directly; it is CI proof that the iOS build compiles at the
       # released revision and the input for a future TestFlight pipeline.
       - name: Build
+        env:
+          INPUT_BUILD_NAME: ${{ inputs.build-name }}
         run: |
-          BUILD_NAME="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
+            BUILD_NAME="$INPUT_BUILD_NAME"
+            LABEL="v$BUILD_NAME"
+          else
+            BUILD_NAME="${GITHUB_REF_NAME#v}"
+            LABEL="$GITHUB_REF_NAME"
+          fi
           flutter build ipa --release --no-codesign \
             --build-name "$BUILD_NAME" --build-number "$GITHUB_RUN_NUMBER"
           mkdir -p dist
           (cd build/ios/archive && zip -qry \
-            "$GITHUB_WORKSPACE/dist/georeport-$GITHUB_REF_NAME-ios-unsigned.xcarchive.zip" \
+            "$GITHUB_WORKSPACE/dist/georeport-$LABEL-ios-unsigned.xcarchive.zip" \
             Runner.xcarchive)
 
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
@@ -106,6 +161,9 @@ jobs:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
     needs: [android, ios]
+    # Only a tag publishes. A manual run exists to produce and check a build,
+    # and must never create a release.
+    if: github.event_name == 'push'
     permissions:
       contents: write
     steps:
