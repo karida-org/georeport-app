@@ -28,11 +28,16 @@ class ScriptedAdapter implements HttpClientAdapter {
     final reply = requests.length <= replies.length
         ? replies[requests.length - 1]
         : replies.last;
+    final rawBody = reply.rawBody;
     return ResponseBody.fromString(
-      jsonEncode(reply.body),
+      rawBody ?? jsonEncode(reply.body),
       reply.statusCode,
       headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
+        Headers.contentTypeHeader: [
+          rawBody == null
+              ? Headers.jsonContentType
+              : Headers.textPlainContentType,
+        ],
       },
     );
   }
@@ -51,16 +56,27 @@ class SeenRequest {
   SeenRequest.from(RequestOptions options)
     : uri = options.uri,
       method = options.method,
+      body = options.data,
       headers = Map<String, dynamic>.from(options.headers);
 
   final Uri uri;
   final String method;
+
+  /// The request payload as the caller passed it, before serialization.
+  final Object? body;
   final Map<String, dynamic> headers;
 }
 
 class ScriptedReply {
-  const ScriptedReply(this.statusCode, [this.body = const {}]);
+  /// A JSON reply: [body] is encoded and served as `application/json`.
+  const ScriptedReply(this.statusCode, [this.body = const {}]) : rawBody = null;
+
+  /// A reply served verbatim, for the binary path where the exact bytes on
+  /// the wire are what the caller receives.
+  const ScriptedReply.raw(this.statusCode, String this.rawBody)
+    : body = const <String, dynamic>{};
 
   final int statusCode;
   final Object body;
+  final String? rawBody;
 }
