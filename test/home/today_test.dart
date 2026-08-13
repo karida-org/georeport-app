@@ -6,19 +6,23 @@ import 'package:georeport/src/features/home/today_providers.dart';
 import 'package:georeport/src/nav/maps_handoff.dart';
 import 'package:latlong2/latlong.dart';
 
-BundleIssue issue({required int id, String? assignedTo, DateTime? dueDate}) =>
-    BundleIssue(
-      summary: IssueSummary.fromJson({
-        'id': id,
-        'project_id': 1,
-        'subject': 'Issue $id',
-        'status_id': 1,
-        'tracker_id': 1,
-        'assigned_to': ?assignedTo,
-        if (dueDate != null)
-          'due_date': dueDate.toIso8601String().split('T').first,
-      }),
-    );
+BundleIssue issue({
+  required int id,
+  String? assignedTo,
+  int? assignedToId,
+  DateTime? dueDate,
+}) => BundleIssue(
+  summary: IssueSummary.fromJson({
+    'id': id,
+    'project_id': 1,
+    'subject': 'Issue $id',
+    'status_id': 1,
+    'tracker_id': 1,
+    'assigned_to': ?assignedTo,
+    'assigned_to_id': ?assignedToId,
+    if (dueDate != null) 'due_date': dueDate.toIso8601String().split('T').first,
+  }),
+);
 
 void main() {
   final today = DateTime(2026, 8, 12, 14, 30);
@@ -36,6 +40,7 @@ void main() {
         ),
         issue(id: 5, assignedTo: 'Me'), // no due date
       ],
+      assigneeId: null,
       assigneeDisplayName: 'Me',
       today: today,
     );
@@ -46,10 +51,38 @@ void main() {
   test('an unknown identity yields an empty plate, not everything', () {
     final result = todayIssues(
       [issue(id: 1, assignedTo: 'Me', dueDate: DateTime(2026, 8, 12))],
+      assigneeId: null,
       assigneeDisplayName: null,
       today: today,
     );
     expect(result, isEmpty);
+  });
+
+  test('matches on the assignee id, whatever the instance names people', () {
+    // Redmine renders names through its user_format setting, so the app's
+    // own "firstname lastname" need not resemble what the server sent. The
+    // id has to carry the match on its own.
+    final result = todayIssues(
+      [
+        issue(
+          id: 1,
+          assignedTo: 'Smith, J.',
+          assignedToId: 7,
+          dueDate: DateTime(2026, 8, 12),
+        ),
+        issue(
+          id: 2,
+          assignedTo: 'Jones, K.',
+          assignedToId: 9,
+          dueDate: DateTime(2026, 8, 12),
+        ),
+      ],
+      assigneeId: 7,
+      assigneeDisplayName: 'John Smith',
+      today: today,
+    );
+
+    expect([for (final i in result) i.summary.id], [1]);
   });
 
   group('maps handoff', () {
