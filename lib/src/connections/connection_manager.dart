@@ -115,7 +115,10 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       'kind': 'api_key',
       'api_key': apiKey,
     });
-    await _commit(connection, await _enrich(connection, client, capabilities));
+    await _commit(
+      connection,
+      await _enrich(connection, client, capabilities, isNewConnection: true),
+    );
   }
 
   /// Runs the browser sign-in against an instance advertising a mobile OAuth
@@ -138,7 +141,10 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     final connection = _newConnection(normalized, ConnectionAuthKind.oauth);
     await _persistOAuthSecret(connection.id, config, tokens);
     final client = _oauthClient(connection, config, tokens);
-    await _commit(connection, await _enrich(connection, client, capabilities));
+    await _commit(
+      connection,
+      await _enrich(connection, client, capabilities, isNewConnection: true),
+    );
   }
 
   /// Activates a saved connection. Failures (dead session, offline) throw
@@ -368,6 +374,7 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
     GttSyncClient client,
     Capabilities capabilities, {
     List<String> newScopes = const [],
+    bool isNewConnection = false,
   }) async {
     GttStyleSettings style = const GttStyleSettings();
     CurrentUser? user;
@@ -383,12 +390,13 @@ class ConnectionManager extends AsyncNotifier<ConnectionsState> {
       debugPrint('Current user unavailable: $error');
     }
     // The offline-resume snapshot; failures are ignored because a session
-    // that cannot be cached is still a working session. An activation can
-    // race a removal, so a connection that vanished from the saved list is
-    // not re-cached (an empty state means the initial build, where no
-    // removal can be running yet).
-    final saved = state.value?.connections;
-    if (saved == null || saved.any((c) => c.id == connection.id)) {
+    // that cannot be cached is still a working session. See
+    // [mayWriteConnectionMeta] for when the write is skipped.
+    if (mayWriteConnectionMeta(
+      connectionId: connection.id,
+      savedIds: state.value?.connections.map((c) => c.id),
+      isNewConnection: isNewConnection,
+    )) {
       try {
         await (await _metaCache()).save(
           connection.id,

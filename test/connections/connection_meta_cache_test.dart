@@ -129,4 +129,54 @@ void main() {
       expect(isUnreachableError(StateError('no credentials')), isFalse);
     });
   });
+
+  group('mayWriteConnectionMeta', () {
+    test('writes for a connection that is still saved', () {
+      expect(
+        mayWriteConnectionMeta(
+          connectionId: 'a',
+          savedIds: const ['a', 'b'],
+          isNewConnection: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('skips a connection removed while its metadata was fetched', () {
+      expect(
+        mayWriteConnectionMeta(
+          connectionId: 'a',
+          savedIds: const ['b'],
+          isNewConnection: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('writes for a new connection, which is not saved yet', () {
+      // Regression: a first connection is committed only after its metadata
+      // is fetched, so it is absent from the saved list at this point. It
+      // used to be skipped, leaving a fresh install with no snapshot to
+      // resume from offline.
+      expect(
+        mayWriteConnectionMeta(
+          connectionId: 'a',
+          savedIds: const <String>[],
+          isNewConnection: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('writes while the saved list is still loading', () {
+      expect(
+        mayWriteConnectionMeta(
+          connectionId: 'a',
+          savedIds: null,
+          isNewConnection: false,
+        ),
+        isTrue,
+      );
+    });
+  });
 }
