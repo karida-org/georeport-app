@@ -131,3 +131,31 @@ bool isUnreachableError(Object error) {
   }
   return error is SocketException;
 }
+
+/// Whether the snapshot for [connectionId] may still be written, given the
+/// connection ids currently saved.
+///
+/// Fetching the metadata takes a round trip, and the user can remove the
+/// connection while that is in flight. Writing afterwards would leave a
+/// snapshot behind for a connection that no longer exists, so a connection
+/// that has disappeared from [savedIds] is skipped.
+///
+/// A connection being added for the first time is the opposite case: it is
+/// not in [savedIds] yet, because it is saved only after its metadata has
+/// been fetched. It also cannot have been removed, since the user has never
+/// seen it. Pass [isNewConnection] so the very first session on a fresh
+/// install still gets a snapshot; that is the session most likely to be
+/// reopened without a network.
+///
+/// [savedIds] is null while the saved list is still loading, when no removal
+/// can have happened yet.
+bool mayWriteConnectionMeta({
+  required String connectionId,
+  required Iterable<String>? savedIds,
+  required bool isNewConnection,
+}) {
+  if (isNewConnection || savedIds == null) {
+    return true;
+  }
+  return savedIds.contains(connectionId);
+}
