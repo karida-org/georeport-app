@@ -145,7 +145,13 @@ void main() {
 
       await expectLater(
         dio.get<dynamic>('/gtt_sync/bundle'),
-        throwsA(isA<DioException>()),
+        throwsA(
+          isA<DioException>().having(
+            (e) => e.response?.statusCode,
+            'statusCode',
+            401,
+          ),
+        ),
       );
       expect(
         adapter.requests,
@@ -163,7 +169,13 @@ void main() {
 
       await expectLater(
         dio.get<dynamic>('/gtt_sync/bundle'),
-        throwsA(isA<DioException>()),
+        throwsA(
+          isA<DioException>().having(
+            (e) => e.response?.statusCode,
+            'statusCode',
+            401,
+          ),
+        ),
       );
       expect(adapter.requests, hasLength(1));
     });
