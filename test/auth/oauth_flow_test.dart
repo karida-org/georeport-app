@@ -269,32 +269,39 @@ void main() {
     });
 
     test('ignores deep links that are not the redirect', () async {
-      // The app receives every link for its scheme. A share or a shortcut
+      // The app receives every link for its scheme, so a share or a shortcut
       // arriving mid-sign-in must not be mistaken for the callback.
+      //
+      // Asserted by delivering the noise first and the real callback after:
+      // if either impostor were accepted, the flow would fail on the missing
+      // code or the wrong state instead of completing. Proving it by waiting
+      // for a timeout would also pass if the noise were never delivered at
+      // all, and would tie the test to wall-clock timing.
       final callbacks = StreamController<Uri>();
       addTearDown(callbacks.close);
       final flow = OAuthFlow(
         dio: Dio()
-          ..httpClientAdapter = ScriptedAdapter([const ScriptedReply(200)]),
+          ..httpClientAdapter = ScriptedAdapter([
+            const ScriptedReply(200, {
+              'access_token': 'at-1',
+              'expires_in': 3600,
+            }),
+          ]),
         callbackLinks: () => callbacks.stream,
         openUrl: (uri) async {
           callbacks
+            // Right scheme, wrong host and path.
             ..add(Uri.parse('georeport://share/photo?id=1'))
-            ..add(Uri.parse('https://example.org/oauth/callback?code=x'));
+            // Right path, wrong scheme.
+            ..add(Uri.parse('https://example.org/oauth/callback?code=x'))
+            ..add(callbackFor(uri));
           return true;
         },
       );
 
-      await expectLater(
-        flow.authorize(_config, timeout: const Duration(milliseconds: 200)),
-        throwsA(
-          isA<OAuthFlowException>().having(
-            (e) => e.message,
-            'message',
-            contains('timed out'),
-          ),
-        ),
-      );
+      final tokens = await flow.authorize(_config);
+
+      expect(tokens.accessToken, 'at-1');
     });
   });
 
