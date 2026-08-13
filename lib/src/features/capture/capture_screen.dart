@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/bundle.dart';
 import '../../api/models/project_schema.dart';
+import '../../capture/custom_field_values.dart';
 import '../../capture/device_location.dart';
 import '../../capture/exif_location.dart';
 import '../../capture/issue_draft.dart';
@@ -209,43 +210,16 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       setState(() => _error = l10n.captureSubjectRequired);
       return;
     }
-    // A never-touched switch means "off", not "missing".
-    final values = <int, Object>{
-      for (final field in fields)
-        if (field.fieldFormat == 'bool' && field.required)
-          field.id: _customFieldValues[field.id] ?? '0',
-    };
-    // Trim text values so whitespace never masquerades as content: an
-    // all-blank entry drops out entirely and fails the required check.
-    for (final entry in _customFieldValues.entries) {
-      final value = entry.value;
-      if (value is String) {
-        final trimmed = value.trim();
-        if (trimmed.isNotEmpty) {
-          values[entry.key] = trimmed;
-        }
-      } else {
-        values[entry.key] = value;
-      }
-    }
-    final missing = [
-      for (final field in fields)
-        if (field.required && values[field.id] == null) field.name,
-    ];
+    final values = normalizeCustomFieldValues(
+      fields: fields,
+      entered: _customFieldValues,
+    );
+    final missing = missingRequiredFields(fields: fields, values: values);
     if (missing.isNotEmpty) {
       setState(() => _error = l10n.captureFieldsRequired(missing.join(', ')));
       return;
     }
-    final notNumeric = [
-      for (final field in fields)
-        if ((field.fieldFormat == 'int' || field.fieldFormat == 'float') &&
-            values[field.id] is String &&
-            (field.fieldFormat == 'int'
-                    ? int.tryParse(values[field.id]! as String)
-                    : num.tryParse(values[field.id]! as String)) ==
-                null)
-          field.name,
-    ];
+    final notNumeric = nonNumericFields(fields: fields, values: values);
     if (notNumeric.isNotEmpty) {
       setState(() => _error = l10n.captureFieldsNumeric(notNumeric.join(', ')));
       return;
