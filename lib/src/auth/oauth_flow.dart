@@ -9,6 +9,19 @@ import 'oauth_config.dart';
 import 'oauth_tokens.dart';
 import 'pkce.dart';
 
+/// Opens [uri] outside the app, returning false when nothing could handle it.
+///
+/// A seam, so the flow's own logic (state matching, the error parameter, the
+/// timeout) can be exercised without a browser. Defaults to the system
+/// browser, which is where the grant has to happen.
+typedef UrlOpener = Future<bool> Function(Uri uri);
+
+/// The deep links arriving back into the app.
+///
+/// A function rather than a stream because it is subscribed to per attempt,
+/// matching how the underlying platform stream is consumed.
+typedef CallbackLinks = Stream<Uri> Function();
+
 class OAuthFlowException implements Exception {
   const OAuthFlowException(this.message);
 
@@ -25,12 +38,28 @@ class OAuthFlowException implements Exception {
 /// The grant happens in the browser on purpose: the app never sees the user's
 /// password, only the resulting tokens.
 class OAuthFlow {
-  OAuthFlow({Dio? dio, AppLinks? appLinks})
-    : _dio = dio ?? Dio(),
-      _appLinks = appLinks ?? AppLinks();
+  OAuthFlow({
+    Dio? dio,
+    UrlOpener? openUrl,
+    CallbackLinks? callbackLinks,
+    AppLinks? appLinks,
+  }) : _dio = dio ?? Dio(),
+       _openUrl = openUrl ?? _openInSystemBrowser,
+       // Lazily: constructing AppLinks touches a platform channel, which a
+       // test supplying its own stream must not have to stand up.
+       _callbackLinks = callbackLinks ?? _linksFrom(appLinks);
 
   final Dio _dio;
-  final AppLinks _appLinks;
+  final UrlOpener _openUrl;
+  final CallbackLinks _callbackLinks;
+
+  static CallbackLinks _linksFrom(AppLinks? provided) {
+    final links = provided ?? AppLinks();
+    return () => links.uriLinkStream;
+  }
+
+  static Future<bool> _openInSystemBrowser(Uri uri) =>
+      launchUrl(uri, mode: LaunchMode.externalApplication);
 
   Future<OAuthTokens> authorize(
     OAuthConfig config, {
@@ -58,7 +87,7 @@ class OAuthFlow {
     // not leave a listener that swallows a later attempt's callback.
     final expected = Uri.parse(config.redirectUri);
     final completer = Completer<Uri>();
-    final subscription = _appLinks.uriLinkStream.listen((uri) {
+    final subscription = _callbackLinks().listen((uri) {
       final matches =
           uri.scheme == expected.scheme &&
           uri.host == expected.host &&
@@ -70,10 +99,7 @@ class OAuthFlow {
 
     final Uri callback;
     try {
-      final launched = await launchUrl(
-        authorizeUri,
-        mode: LaunchMode.externalApplication,
-      );
+      final launched = await _openUrl(authorizeUri);
       if (!launched) {
         throw const OAuthFlowException('Could not open the sign-in page.');
       }
