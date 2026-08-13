@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/models/project_schema.dart';
+import '../../connections/active_client.dart';
 import '../../connections/connection_manager.dart';
-import '../issues/issue_providers.dart';
 import 'schema_cache.dart';
 
 /// The editing schema for one project, driving the create form. Successful

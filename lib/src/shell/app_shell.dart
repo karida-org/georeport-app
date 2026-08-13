@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../connections/connection_manager.dart';
-import '../features/issues/sync_status.dart';
+import '../issues/sync_status.dart';
 import '../net/connectivity.dart';
 import 'bottom_bar.dart';
 import 'session_guard.dart';

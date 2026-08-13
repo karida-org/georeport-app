@@ -1,5 +1,5 @@
-import '../../api/models/bundle.dart';
-import '../../api/models/changes_page.dart';
+import '../api/models/bundle.dart';
+import '../api/models/changes_page.dart';
 
 /// The issues held in memory for the active connection, keyed by id, plus
 /// the change-feed cursor that keeps them fresh. Pure data: applying a feed

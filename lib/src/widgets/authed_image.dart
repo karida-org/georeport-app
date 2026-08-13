@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../features/issues/issue_providers.dart';
+import '../connections/active_client.dart';
 
 /// Bytes of a same-instance asset, fetched with the active connection's
 /// credentials (plain `Image.network` cannot carry the bearer token).

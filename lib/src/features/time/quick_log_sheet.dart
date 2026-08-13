@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../api/models/project_schema.dart';
+import '../../connections/active_client.dart';
 import '../../time/timers_notifier.dart';
 import '../capture/capture_providers.dart';
-import '../issues/issue_providers.dart';
 import 'time_providers.dart';
 
 /// Opens the quick-log sheet for an issue. Prefills the hours from the

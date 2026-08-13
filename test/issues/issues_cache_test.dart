@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:georeport/src/api/models/bundle.dart';
 import 'package:georeport/src/api/models/geojson.dart';
 import 'package:georeport/src/api/models/issue_summary.dart';
-import 'package:georeport/src/features/issues/issues_cache.dart';
-import 'package:georeport/src/features/issues/issues_state.dart';
+import 'package:georeport/src/issues/issues_cache.dart';
+import 'package:georeport/src/issues/issues_state.dart';
 
 void main() {
   late Directory temp;

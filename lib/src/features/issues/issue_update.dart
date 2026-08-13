@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../capture/image_shrink.dart';
 import '../../capture/issue_draft.dart';
+import '../../connections/active_client.dart';
 import '../issues/issues_store.dart';
 import 'issue_providers.dart';
 
