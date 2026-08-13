@@ -33,6 +33,7 @@ void main() {
     ScriptedAdapter? adapter,
   }) {
     final callbacks = StreamController<Uri>();
+    addTearDown(callbacks.close);
     final opened = <Uri>[];
     final dio = Dio()
       ..httpClientAdapter = adapter ?? ScriptedAdapter(tokenReplies);
@@ -87,6 +88,7 @@ void main() {
       // A server may advertise an authorize URL with its own parameters; the
       // flow adds to them rather than replacing them.
       final callbacks = StreamController<Uri>();
+      addTearDown(callbacks.close);
       final opened = <Uri>[];
       final flow = OAuthFlow(
         dio: Dio()
@@ -270,6 +272,7 @@ void main() {
       // The app receives every link for its scheme. A share or a shortcut
       // arriving mid-sign-in must not be mistaken for the callback.
       final callbacks = StreamController<Uri>();
+      addTearDown(callbacks.close);
       final flow = OAuthFlow(
         dio: Dio()
           ..httpClientAdapter = ScriptedAdapter([const ScriptedReply(200)]),
@@ -334,6 +337,7 @@ void main() {
       // second attempt's callback would be consumed by the first listener and
       // the user could never sign in again without restarting the app.
       final callbacks = StreamController<Uri>.broadcast();
+      addTearDown(callbacks.close);
       var attempt = 0;
       final flow = OAuthFlow(
         dio: Dio()
