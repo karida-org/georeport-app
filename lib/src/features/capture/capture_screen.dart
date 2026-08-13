@@ -24,6 +24,9 @@ import 'capture_steps.dart';
 import 'capture_widgets.dart';
 import 'custom_field_editor.dart';
 import 'location_picker_screen.dart';
+import 'steps/details_step.dart';
+import 'steps/project_step.dart';
+import 'steps/review_step.dart';
 
 /// Where a draft location came from, shown as context under the coordinates.
 
@@ -365,12 +368,12 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     final body = switch (_step) {
       CaptureStep.photos => _photosStep(l10n),
       CaptureStep.location => _locationStep(),
-      CaptureStep.project => _projectStep(l10n, schema, projects, projectId),
+      CaptureStep.project => _projectStep(schema, projects, projectId),
       CaptureStep.details =>
         trackerId == null
             ? Text(l10n.captureNoTrackers)
-            : _detailsStep(l10n, schema, trackerId),
-      CaptureStep.review => _reviewStep(l10n, schema, projects, projectId),
+            : _detailsStep(schema, trackerId),
+      CaptureStep.review => _reviewStep(schema, projects, projectId),
     };
     return ListView(padding: const EdgeInsets.all(16), children: [body]);
   }
@@ -412,102 +415,47 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   }
 
   Widget _projectStep(
-    AppLocalizations l10n,
     ProjectSchema schema,
     List<BundleProject> projects,
     int projectId,
   ) {
-    final trackerId = _effectiveTrackerId(schema, projectId);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        DropdownButtonFormField<int>(
-          initialValue: projectId,
-          decoration: InputDecoration(
-            labelText: l10n.issueProjectLabel,
-            border: const OutlineInputBorder(),
-          ),
-          items: [
-            for (final project in projects)
-              DropdownMenuItem(value: project.id, child: Text(project.name)),
-          ],
-          onChanged: _submitting
-              ? null
-              : (value) => setState(() {
-                  _projectId = value;
-                  _trackerId = null;
-                  _customFieldValues.clear();
-                }),
-        ),
-        const SizedBox(height: 16),
-        if (schema.trackers.isEmpty)
-          Text(l10n.captureNoTrackers)
-        else
-          DropdownButtonFormField<int>(
-            initialValue: trackerId,
-            decoration: InputDecoration(
-              labelText: l10n.captureTrackerLabel,
-              border: const OutlineInputBorder(),
-            ),
-            items: [
-              for (final tracker in schema.trackers)
-                DropdownMenuItem(value: tracker.id, child: Text(tracker.name)),
-            ],
-            onChanged: _submitting
-                ? null
-                : (value) => setState(() {
-                    _trackerId = value;
-                    _customFieldValues.clear();
-                  }),
-          ),
-      ],
+    return CaptureProjectStep(
+      projects: projects,
+      projectId: projectId,
+      schema: schema,
+      trackerId: _effectiveTrackerId(schema, projectId),
+      enabled: !_submitting,
+      onProjectChanged: (value) => setState(() {
+        _projectId = value;
+        _trackerId = null;
+        _customFieldValues.clear();
+      }),
+      onTrackerChanged: (value) => setState(() {
+        _trackerId = value;
+        _customFieldValues.clear();
+      }),
     );
   }
 
   Widget _reviewStep(
-    AppLocalizations l10n,
     ProjectSchema schema,
     List<BundleProject> projects,
     int projectId,
   ) {
     final trackerId = _effectiveTrackerId(schema, projectId);
-    final project = projects
-        .where((candidate) => candidate.id == projectId)
-        .map((candidate) => candidate.name)
-        .firstOrNull;
-    final tracker = schema.trackers
-        .where((candidate) => candidate.id == trackerId)
-        .map((candidate) => candidate.name)
-        .firstOrNull;
-    final subject = _subjectController.text.trim();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (_photos.isNotEmpty) ...[
-          CapturePhotoStrip(photos: _photos),
-          const SizedBox(height: 16),
-        ],
-        _ReviewRow(
-          label: l10n.captureSubjectLabel,
-          value: subject.isEmpty ? l10n.captureSubjectRequired : subject,
-        ),
-        if (project != null)
-          _ReviewRow(label: l10n.issueProjectLabel, value: project),
-        if (tracker != null)
-          _ReviewRow(label: l10n.captureTrackerLabel, value: tracker),
-        _ReviewRow(
-          label: l10n.captureStepLocation,
-          value: _location == null
-              ? l10n.captureNoLocation
-              : '${_location!.latitude.toStringAsFixed(5)}, '
-                    '${_location!.longitude.toStringAsFixed(5)}',
-        ),
-        if (_descriptionController.text.trim().isNotEmpty)
-          _ReviewRow(
-            label: l10n.captureDescriptionLabel,
-            value: _descriptionController.text.trim(),
-          ),
-      ],
+    return CaptureReviewStep(
+      photos: _photos,
+      subject: _subjectController.text.trim(),
+      projectName: projects
+          .where((candidate) => candidate.id == projectId)
+          .map((candidate) => candidate.name)
+          .firstOrNull,
+      trackerName: schema.trackers
+          .where((candidate) => candidate.id == trackerId)
+          .map((candidate) => candidate.name)
+          .firstOrNull,
+      location: _location,
+      description: _descriptionController.text.trim(),
     );
   }
 
@@ -545,109 +493,26 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     );
   }
 
-  Widget _detailsStep(
-    AppLocalizations l10n,
-    ProjectSchema schema,
-    int trackerId,
-  ) {
-    final fields = schema
-        .fieldsForTracker(trackerId)
-        .where(
-          (field) => supportedCustomFieldFormats.contains(field.fieldFormat),
-        )
-        .toList();
-    final required = fields.where((field) => field.required).toList();
-    final optional = fields.where((field) => !field.required).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextField(
-          controller: _subjectController,
-          enabled: !_submitting,
-          decoration: InputDecoration(
-            labelText: '${l10n.captureSubjectLabel} *',
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _descriptionController,
-          enabled: !_submitting,
-          maxLines: 3,
-          decoration: InputDecoration(
-            labelText: l10n.captureDescriptionLabel,
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        for (final field in required) ...[
-          const SizedBox(height: 16),
-          CustomFieldEditor(
-            // Keyed per field so text state never leaks across tracker
-            // switches when the element tree is otherwise identical.
-            key: ValueKey('cf-${field.id}'),
-            field: field,
-            value: _customFieldValues[field.id],
-            onChanged: (value) => setState(() {
-              value == null
-                  ? _customFieldValues.remove(field.id)
-                  : _customFieldValues[field.id] = value;
-            }),
-          ),
-        ],
-        if (optional.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () =>
-                setState(() => _showOptionalFields = !_showOptionalFields),
-            icon: Icon(
-              _showOptionalFields ? Icons.expand_less : Icons.expand_more,
-            ),
-            label: Text(l10n.captureMoreFields),
-          ),
-          if (_showOptionalFields)
-            for (final field in optional) ...[
-              const SizedBox(height: 16),
-              CustomFieldEditor(
-                key: ValueKey('cf-${field.id}'),
-                field: field,
-                value: _customFieldValues[field.id],
-                onChanged: (value) => setState(() {
-                  value == null
-                      ? _customFieldValues.remove(field.id)
-                      : _customFieldValues[field.id] = value;
-                }),
-              ),
-            ],
-        ],
-      ],
-    );
-  }
-}
-
-/// One labelled line of the review summary.
-class _ReviewRow extends StatelessWidget {
-  const _ReviewRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          Text(value, style: theme.textTheme.bodyLarge),
-        ],
-      ),
+  Widget _detailsStep(ProjectSchema schema, int trackerId) {
+    return CaptureDetailsStep(
+      subjectController: _subjectController,
+      descriptionController: _descriptionController,
+      fields: schema
+          .fieldsForTracker(trackerId)
+          .where(
+            (field) => supportedCustomFieldFormats.contains(field.fieldFormat),
+          )
+          .toList(),
+      values: _customFieldValues,
+      enabled: !_submitting,
+      showOptional: _showOptionalFields,
+      onToggleOptional: () =>
+          setState(() => _showOptionalFields = !_showOptionalFields),
+      onFieldChanged: (fieldId, value) => setState(() {
+        value == null
+            ? _customFieldValues.remove(fieldId)
+            : _customFieldValues[fieldId] = value;
+      }),
     );
   }
 }
