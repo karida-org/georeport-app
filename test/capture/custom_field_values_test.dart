@@ -85,16 +85,16 @@ void main() {
       expect(values[7], ['a', 'b']);
     });
 
-    test('carries entries for fields the tracker does not have (see #81)', () {
-      // Documents today's behaviour rather than endorsing it. Switching
-      // tracker leaves entries behind, and they are passed through. Redmine
-      // drops them, so nothing wrong is created; issue #81 tightens this.
+    test('drops entries for fields the tracker does not have', () {
+      // The form accumulates entries as the user types. Switching tracker
+      // leaves values behind for fields that no longer apply, and the user
+      // cannot see them to clear them.
       final values = normalizeCustomFieldValues(
         fields: [_field(id: 1, name: 'Note')],
         entered: {1: 'kept', 99: 'from another tracker'},
       );
 
-      expect(values.keys, [1, 99]);
+      expect(values.keys, [1]);
     });
   });
 

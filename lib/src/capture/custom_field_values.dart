@@ -10,10 +10,10 @@ import '../api/models/project_schema.dart';
 /// - Text is trimmed, and an all-whitespace entry drops out entirely. Otherwise
 ///   a space would satisfy a required field and reach the server as blank.
 ///
-/// [fields] decides which required checkboxes get a default, but every entry
-/// in [entered] is carried through, including one left behind by a tracker the
-/// user switched away from. Redmine drops values for fields the tracker does
-/// not have, so nothing wrong is created; see issue #81.
+/// Only fields in [fields] are sent. The form accumulates entries as the user
+/// types, and switching tracker leaves behind values for fields the new
+/// tracker does not have; those are dropped here rather than sent for the
+/// server to discard.
 Map<int, Object> normalizeCustomFieldValues({
   required List<SchemaCustomField> fields,
   required Map<int, Object> entered,
@@ -23,7 +23,11 @@ Map<int, Object> normalizeCustomFieldValues({
       if (field.fieldFormat == 'bool' && field.required)
         field.id: entered[field.id] ?? '0',
   };
+  final applicable = {for (final field in fields) field.id};
   for (final entry in entered.entries) {
+    if (!applicable.contains(entry.key)) {
+      continue;
+    }
     final value = entry.value;
     if (value is! String) {
       values[entry.key] = value;
