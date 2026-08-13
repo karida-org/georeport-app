@@ -28,16 +28,21 @@ class ScriptedAdapter implements HttpClientAdapter {
     final reply = requests.length <= replies.length
         ? replies[requests.length - 1]
         : replies.last;
-    final rawBody = reply.rawBody;
+    final rawBytes = reply.rawBytes;
+    if (rawBytes != null) {
+      return ResponseBody.fromBytes(
+        rawBytes,
+        reply.statusCode,
+        headers: {
+          Headers.contentTypeHeader: ['application/octet-stream'],
+        },
+      );
+    }
     return ResponseBody.fromString(
-      rawBody ?? jsonEncode(reply.body),
+      jsonEncode(reply.body),
       reply.statusCode,
       headers: {
-        Headers.contentTypeHeader: [
-          rawBody == null
-              ? Headers.jsonContentType
-              : Headers.textPlainContentType,
-        ],
+        Headers.contentTypeHeader: [Headers.jsonContentType],
       },
     );
   }
@@ -69,14 +74,19 @@ class SeenRequest {
 
 class ScriptedReply {
   /// A JSON reply: [body] is encoded and served as `application/json`.
-  const ScriptedReply(this.statusCode, [this.body = const {}]) : rawBody = null;
+  const ScriptedReply(this.statusCode, [this.body = const {}])
+    : rawBytes = null;
 
-  /// A reply served verbatim, for the binary path where the exact bytes on
-  /// the wire are what the caller receives.
-  const ScriptedReply.raw(this.statusCode, String this.rawBody)
+  /// A reply served as raw bytes, for the binary path.
+  ///
+  /// Bytes rather than a string because a string would go through UTF-8, which
+  /// cannot carry an arbitrary byte (0xFF alone is not valid UTF-8). An image
+  /// is exactly that kind of payload, so a test asserting the bytes arrive
+  /// intact has to be able to send ones that text could not represent.
+  const ScriptedReply.bytes(this.statusCode, List<int> this.rawBytes)
     : body = const <String, dynamic>{};
 
   final int statusCode;
   final Object body;
-  final String? rawBody;
+  final List<int>? rawBytes;
 }

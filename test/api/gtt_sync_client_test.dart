@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -267,11 +266,15 @@ void main() {
 
   group('fetchBytes', () {
     test('passes a relative path through unchanged', () async {
-      final t = _client(replies: [const ScriptedReply.raw(200, 'JPEGDATA')]);
+      // Real image bytes, not text: 0xFF alone is not valid UTF-8, so this
+      // payload proves the bytes arrive intact rather than round-tripping
+      // through a string.
+      const jpegHeader = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
+      final t = _client(replies: [const ScriptedReply.bytes(200, jpegHeader)]);
 
       final bytes = await t.client.fetchBytes('/attachments/download/9/a.jpg');
 
-      expect(utf8.decode(bytes), 'JPEGDATA');
+      expect(bytes, jpegHeader);
       expect(
         t.adapter.requests.single.uri.toString(),
         'https://redmine.example.org/attachments/download/9/a.jpg',
@@ -283,7 +286,11 @@ void main() {
       // from the one the user connected to. Following them would send this
       // client's credentials somewhere else, or reach an instance that does
       // not know them.
-      final t = _client(replies: [const ScriptedReply.raw(200, 'X')]);
+      final t = _client(
+        replies: [
+          const ScriptedReply.bytes(200, [0xFF, 0x01]),
+        ],
+      );
 
       await t.client.fetchBytes(
         'https://canonical.example.com/attachments/download/9/a.jpg',
@@ -301,7 +308,9 @@ void main() {
       // 404ed.
       final t = _client(
         baseUrl: 'https://example.org/redmine',
-        replies: [const ScriptedReply.raw(200, 'X')],
+        replies: [
+          const ScriptedReply.bytes(200, [0xFF, 0x01]),
+        ],
       );
 
       await t.client.fetchBytes(
@@ -317,7 +326,11 @@ void main() {
     test('carries the query string of an absolute URL', () async {
       // Thumbnails are a size query on the same path; dropping it returns the
       // full-size image.
-      final t = _client(replies: [const ScriptedReply.raw(200, 'X')]);
+      final t = _client(
+        replies: [
+          const ScriptedReply.bytes(200, [0xFF, 0x01]),
+        ],
+      );
 
       await t.client.fetchBytes(
         'https://redmine.example.org/attachments/thumbnail/9?size=200',
